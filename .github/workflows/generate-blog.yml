@@ -13,7 +13,15 @@ jobs:
       - name: Call Gemini API
         id: gemini
         run: |
-          PROMPT="You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2000+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and specific tool recommendations. Return ONLY JSON with fields: title, summary, content, tags, keywords"
+          PROMPT="You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2000+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and specific tool recommendations. Return the response in this exact format:
+          
+          TITLE: [your title here]
+          SUMMARY: [your summary here]
+          TAGS: [tag1, tag2, tag3]
+          KEYWORDS: [keyword1, keyword2]
+          
+          CONTENT:
+          [your full HTML content here]"
           
           echo "🌐 Calling Gemini API..."
           
@@ -36,53 +44,59 @@ jobs:
             exit 1
           fi
           
-          TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
+          # Extract text using Python (handles any content safely)
+          echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' > /tmp/raw.txt
           
-          if [ -z "$TEXT" ] || [ "$TEXT" = "null" ]; then
-            echo "❌ ERROR: No text content"
-            exit 1
-          fi
+          echo "✅ Text extracted ($(wc -c < /tmp/raw.txt) chars)"
           
-          echo "✅ Text extracted (${#TEXT} chars)"
+          # Parse using Python (reliable for messy text)
+          python3 << 'PYEOF'
+          import re
+
+          with open('/tmp/raw.txt', 'r') as f:
+              text = f.read()
+
+          # Extract sections using regex
+          title = re.search(r'TITLE:\s*(.*?)(?=\nSUMMARY:)', text, re.DOTALL)
+          summary = re.search(r'SUMMARY:\s*(.*?)(?=\nTAGS:)', text, re.DOTALL)
+          tags = re.search(r'TAGS:\s*(.*?)(?=\nKEYWORDS:)', text, re.DOTALL)
+          keywords = re.search(r'KEYWORDS:\s*(.*?)(?=\nCONTENT:)', text, re.DOTALL)
+          content = re.search(r'CONTENT:\s*(.*)', text, re.DOTALL)
+
+          title = title.group(1).strip() if title else "Untitled"
+          summary = summary.group(1).strip() if summary else "No summary"
+          tags = tags.group(1).strip() if tags else "Tech 2026"
+          keywords = keywords.group(1).strip() if keywords else "Novox Edtech"
+          content = content.group(1).strip() if content else text
+
+          # Save to files for GitHub Actions output
+          with open('/tmp/title.txt', 'w') as f: f.write(title)
+          with open('/tmp/summary.txt', 'w') as f: f.write(summary)
+          with open('/tmp/tags.txt', 'w') as f: f.write(tags)
+          with open('/tmp/keywords.txt', 'w') as f: f.write(keywords)
+          with open('/tmp/content.txt', 'w') as f: f.write(content)
+
+          print(f"✅ Parsed: {title[:60]}...")
+          PYEOF
           
-          # Save raw text to file for debugging
-          echo "$TEXT" > /tmp/raw_response.txt
-          
-          # Clean markdown fences
-          TEXT=$(echo "$TEXT" | sed 's/```json//g' | sed 's/```//g')
-          
-          # Try to parse with jq, if fails show error
-          if ! echo "$TEXT" | jq . > /tmp/parsed.json 2>/tmp/jq_error.txt; then
-            echo "❌ jq parse failed:"
-            cat /tmp/jq_error.txt
-            echo "First 500 chars of text:"
-            head -c 500 /tmp/raw_response.txt
-            exit 1
-          fi
-          
-          echo "✅ JSON validated"
-          
-          # Extract fields safely
-          TITLE=$(jq -r '.title // "Untitled"' /tmp/parsed.json)
-          SUMMARY=$(jq -r '.summary // "No summary"' /tmp/parsed.json)
-          TAGS=$(jq -r '.tags // [] | join(", ")' /tmp/parsed.json)
-          KEYWORDS=$(jq -r '.keywords // [] | join(", ")' /tmp/parsed.json)
-          
-          # Save simple fields
-          echo "title=$TITLE" >> $GITHUB_OUTPUT
-          echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
-          echo "keywords=$KEYWORDS" >> $GITHUB_OUTPUT
-          
-          # Save content using file-based approach (most reliable)
-          jq -r '.content // "No content"' /tmp/parsed.json > /tmp/content.txt
+          # Save outputs using multiline syntax
           {
+            echo "title<<EOF"
+            cat /tmp/title.txt
+            echo "EOF"
+            echo "summary<<EOF"
+            cat /tmp/summary.txt
+            echo "EOF"
+            echo "tags<<EOF"
+            cat /tmp/tags.txt
+            echo "EOF"
+            echo "keywords<<EOF"
+            cat /tmp/keywords.txt
+            echo "EOF"
             echo "content<<EOF"
             cat /tmp/content.txt
             echo "EOF"
           } >> $GITHUB_OUTPUT
-          
-          echo "✅ Parsed: $TITLE"
           
       - name: Create GitHub Issue
         uses: actions/github-script@v7
@@ -94,4 +108,3 @@ jobs:
               title: '${{ steps.gemini.outputs.title }}',
               body: `## Summary\n${{ steps.gemini.outputs.summary }}\n\n---\n\n${{ steps.gemini.outputs.content }}\n\n---\n\n🏷️ Tags: ${{ steps.gemini.outputs.tags }}\n🔑 Keywords: ${{ steps.gemini.outputs.keywords }}\n🤖 Generated by AI | 📅 ${new Date().toISOString()}`
             });
-            
