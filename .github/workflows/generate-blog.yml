@@ -1,7 +1,7 @@
 name: 🤖 AI Blog Generator
 
 on:
-  workflow_dispatch:  # Only manual trigger for testing
+  workflow_dispatch:  # Manual trigger for testing
 
 jobs:
   generate-blog:
@@ -10,10 +10,21 @@ jobs:
       issues: write
     
     steps:
+      - name: Debug API Key
+        run: |
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "❌ ERROR: GEMINI_API_KEY is not set!"
+            exit 1
+          else
+            echo "✅ API Key is set (length: ${#${{ secrets.GEMINI_API_KEY }}})"
+          fi
+
       - name: Call Gemini API
         id: gemini
         run: |
           PROMPT='You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2000+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and specific tool recommendations. Return ONLY JSON: {"title": "...", "summary": "...", "content": "HTML content", "tags": ["..."], "keywords": ["..."]}'
+          
+          echo "🌐 Calling Gemini API..."
           
           RESPONSE=$(curl -s -X POST \
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
@@ -24,15 +35,54 @@ jobs:
               \"tools\": [{\"googleSearch\": {}}]
             }")
           
-          TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text')
+          echo "📦 Raw Response:"
+          echo "$RESPONSE"
+          
+          # Check if response has error
+          ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error.message // empty')
+          if [ ! -z "$ERROR_MSG" ]; then
+            echo "❌ API Error: $ERROR_MSG"
+            exit 1
+          fi
+          
+          # Extract text
+          TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
+          
+          if [ -z "$TEXT" ] || [ "$TEXT" = "null" ]; then
+            echo "❌ ERROR: No text content in response"
+            echo "Full response:"
+            echo "$RESPONSE" | jq .
+            exit 1
+          fi
+          
+          echo "✅ Text extracted successfully"
+          echo "TEXT length: ${#TEXT}"
+          
+          # Clean markdown fences
           TEXT=$(echo "$TEXT" | sed 's/```json//g' | sed 's/```//g')
           
-          TITLE=$(echo "$TEXT" | jq -r '.title')
-          SUMMARY=$(echo "$TEXT" | jq -r '.summary')
-          CONTENT=$(echo "$TEXT" | jq -r '.content')
-          TAGS=$(echo "$TEXT" | jq -r '.tags | join(", ")')
-          KEYWORDS=$(echo "$TEXT" | jq -r '.keywords | join(", ")')
+          # Validate JSON
+          echo "$TEXT" | jq . > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "❌ ERROR: Response is not valid JSON"
+            echo "Raw text:"
+            echo "$TEXT"
+            exit 1
+          fi
           
+          # Parse fields
+          TITLE=$(echo "$TEXT" | jq -r '.title // "Untitled"')
+          SUMMARY=$(echo "$TEXT" | jq -r '.summary // "No summary"')
+          CONTENT=$(echo "$TEXT" | jq -r '.content // "No content"')
+          TAGS=$(echo "$TEXT" | jq -r '.tags // [] | join(", ")')
+          KEYWORDS=$(echo "$TEXT" | jq -r '.keywords // [] | join(", ")')
+          
+          echo "✅ Parsed successfully:"
+          echo "Title: $TITLE"
+          echo "Summary: $SUMMARY"
+          echo "Tags: $TAGS"
+          
+          # Save outputs
           echo "title=$TITLE" >> $GITHUB_OUTPUT
           echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
           echo "content=$CONTENT" >> $GITHUB_OUTPUT
