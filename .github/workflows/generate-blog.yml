@@ -13,12 +13,10 @@ jobs:
       - name: Call Gemini API
         id: gemini
         run: |
-          # Define prompt as a variable (no single quotes inside)
           PROMPT="You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2000+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and specific tool recommendations. Return ONLY JSON with fields: title, summary, content, tags, keywords"
           
           echo "🌐 Calling Gemini API..."
           
-          # Build JSON payload properly using jq
           PAYLOAD=$(jq -n \
             --arg prompt "$PROMPT" \
             '{
@@ -27,31 +25,21 @@ jobs:
               tools: [{googleSearch: {}}]
             }')
           
-          echo "📦 Request Payload:"
-          echo "$PAYLOAD"
-          
-          # Call API with proper JSON
           RESPONSE=$(curl -s -X POST \
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
           
-          echo "📦 Raw Response:"
-          echo "$RESPONSE"
-          
-          # Check for API errors
           ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error.message // empty')
           if [ ! -z "$ERROR_MSG" ]; then
             echo "❌ API Error: $ERROR_MSG"
             exit 1
           fi
           
-          # Extract text content
           TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
           
           if [ -z "$TEXT" ] || [ "$TEXT" = "null" ]; then
-            echo "❌ ERROR: No text content in response"
-            echo "$RESPONSE" | jq .
+            echo "❌ ERROR: No text content"
             exit 1
           fi
           
@@ -63,8 +51,7 @@ jobs:
           # Validate JSON
           echo "$TEXT" | jq . > /dev/null 2>&1
           if [ $? -ne 0 ]; then
-            echo "❌ ERROR: Response is not valid JSON"
-            echo "Raw text:"
+            echo "❌ ERROR: Not valid JSON"
             echo "$TEXT"
             exit 1
           fi
@@ -72,18 +59,25 @@ jobs:
           # Parse fields
           TITLE=$(echo "$TEXT" | jq -r '.title // "Untitled"')
           SUMMARY=$(echo "$TEXT" | jq -r '.summary // "No summary"')
-          CONTENT=$(echo "$TEXT" | jq -r '.content // "No content"')
           TAGS=$(echo "$TEXT" | jq -r '.tags // [] | join(", ")')
           KEYWORDS=$(echo "$TEXT" | jq -r '.keywords // [] | join(", ")')
           
-          echo "✅ Parsed: $TITLE"
-          
-          # Save outputs
+          # Save simple fields normally
           echo "title=$TITLE" >> $GITHUB_OUTPUT
           echo "summary=$SUMMARY" >> $GITHUB_OUTPUT
-          echo "content=$CONTENT" >> $GITHUB_OUTPUT
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
           echo "keywords=$KEYWORDS" >> $GITHUB_OUTPUT
+          
+          # Save large content field using multiline syntax
+          # This handles newlines and special characters
+          CONTENT=$(echo "$TEXT" | jq -r '.content // "No content"')
+          {
+            echo "content<<EOF"
+            echo "$CONTENT"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+          
+          echo "✅ Parsed: $TITLE"
           
       - name: Create GitHub Issue
         uses: actions/github-script@v7
