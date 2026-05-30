@@ -13,7 +13,10 @@ jobs:
       - name: Call Gemini API
         id: gemini
         run: |
-          PROMPT="You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2000+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and specific tool recommendations. Return the response in this exact format:
+          # Use a random delimiter that won't appear in content
+          DELIM="EOF_$(date +%s)_RANDOM"
+          
+          PROMPT="You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write an EXTREMELY comprehensive 3000+ word blog post about latest 2026 tech trends. Include extensive salary data, detailed hiring statistics, in-depth tool comparisons, real-world case studies, and actionable career advice. Make it authoritative, detailed, and valuable. Return the response in this exact format:
           
           TITLE: [your title here]
           SUMMARY: [your summary here]
@@ -21,7 +24,7 @@ jobs:
           KEYWORDS: [keyword1, keyword2]
           
           CONTENT:
-          [your full HTML content here]"
+          [your full HTML content here - make it 3000+ words with detailed sections]"
           
           echo "🌐 Calling Gemini API..."
           
@@ -49,9 +52,10 @@ jobs:
           
           echo "✅ Text extracted ($(wc -c < /tmp/raw.txt) chars)"
           
-          # Parse using Python (reliable for messy text)
-          python3 << 'PYEOF'
+          # Parse using Python with randomized delimiter
+          python3 << PYEOF
           import re
+          import uuid
 
           with open('/tmp/raw.txt', 'r') as f:
               text = f.read()
@@ -69,34 +73,23 @@ jobs:
           keywords = keywords.group(1).strip() if keywords else "Novox Edtech"
           content = content.group(1).strip() if content else text
 
-          # Save to files for GitHub Actions output
-          with open('/tmp/title.txt', 'w') as f: f.write(title)
-          with open('/tmp/summary.txt', 'w') as f: f.write(summary)
-          with open('/tmp/tags.txt', 'w') as f: f.write(tags)
-          with open('/tmp/keywords.txt', 'w') as f: f.write(keywords)
-          with open('/tmp/content.txt', 'w') as f: f.write(content)
+          # Generate unique delimiter
+          delim = f"DELIMITER_{uuid.uuid4().hex}"
+
+          # Write outputs with unique delimiter for each
+          with open('/tmp/outputs.txt', 'w') as f:
+              f.write(f"title<<{delim}\n{title}\n{delim}\n")
+              f.write(f"summary<<{delim}\n{summary}\n{delim}\n")
+              f.write(f"tags<<{delim}\n{tags}\n{delim}\n")
+              f.write(f"keywords<<{delim}\n{keywords}\n{delim}\n")
+              f.write(f"content<<{delim}\n{content}\n{delim}\n")
 
           print(f"✅ Parsed: {title[:60]}...")
+          print(f"Content length: {len(content)} chars")
           PYEOF
           
-          # Save outputs using multiline syntax
-          {
-            echo "title<<EOF"
-            cat /tmp/title.txt
-            echo "EOF"
-            echo "summary<<EOF"
-            cat /tmp/summary.txt
-            echo "EOF"
-            echo "tags<<EOF"
-            cat /tmp/tags.txt
-            echo "EOF"
-            echo "keywords<<EOF"
-            cat /tmp/keywords.txt
-            echo "EOF"
-            echo "content<<EOF"
-            cat /tmp/content.txt
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+          # Read outputs and append to GITHUB_OUTPUT
+          cat /tmp/outputs.txt >> $GITHUB_OUTPUT
           
       - name: Create GitHub Issue
         uses: actions/github-script@v7
