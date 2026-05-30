@@ -10,53 +10,52 @@ jobs:
       issues: write
     
     steps:
-      - name: Debug API Key
-        run: |
-          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
-            echo "❌ ERROR: GEMINI_API_KEY is not set!"
-            exit 1
-          else
-            echo "✅ API Key is set (length: ${#${{ secrets.GEMINI_API_KEY }}})"
-          fi
-
       - name: Call Gemini API
         id: gemini
         run: |
-          PROMPT='You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2000+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and specific tool recommendations. Return ONLY JSON: {"title": "...", "summary": "...", "content": "HTML content", "tags": ["..."], "keywords": ["..."]}'
+          # Define prompt as a variable (no single quotes inside)
+          PROMPT="You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2000+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and specific tool recommendations. Return ONLY JSON with fields: title, summary, content, tags, keywords"
           
           echo "🌐 Calling Gemini API..."
           
+          # Build JSON payload properly using jq
+          PAYLOAD=$(jq -n \
+            --arg prompt "$PROMPT" \
+            '{
+              contents: [{parts: [{text: $prompt}]}],
+              generationConfig: {temperature: 0.7, maxOutputTokens: 8192},
+              tools: [{googleSearch: {}}]
+            }')
+          
+          echo "📦 Request Payload:"
+          echo "$PAYLOAD"
+          
+          # Call API with proper JSON
           RESPONSE=$(curl -s -X POST \
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"contents\": [{\"parts\": [{\"text\": \"$PROMPT\"}]}],
-              \"generationConfig\": {\"temperature\": 0.7, \"maxOutputTokens\": 8192},
-              \"tools\": [{\"googleSearch\": {}}]
-            }")
+            -d "$PAYLOAD")
           
           echo "📦 Raw Response:"
           echo "$RESPONSE"
           
-          # Check if response has error
+          # Check for API errors
           ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error.message // empty')
           if [ ! -z "$ERROR_MSG" ]; then
             echo "❌ API Error: $ERROR_MSG"
             exit 1
           fi
           
-          # Extract text
+          # Extract text content
           TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
           
           if [ -z "$TEXT" ] || [ "$TEXT" = "null" ]; then
             echo "❌ ERROR: No text content in response"
-            echo "Full response:"
             echo "$RESPONSE" | jq .
             exit 1
           fi
           
-          echo "✅ Text extracted successfully"
-          echo "TEXT length: ${#TEXT}"
+          echo "✅ Text extracted (${#TEXT} chars)"
           
           # Clean markdown fences
           TEXT=$(echo "$TEXT" | sed 's/```json//g' | sed 's/```//g')
@@ -77,10 +76,7 @@ jobs:
           TAGS=$(echo "$TEXT" | jq -r '.tags // [] | join(", ")')
           KEYWORDS=$(echo "$TEXT" | jq -r '.keywords // [] | join(", ")')
           
-          echo "✅ Parsed successfully:"
-          echo "Title: $TITLE"
-          echo "Summary: $SUMMARY"
-          echo "Tags: $TAGS"
+          echo "✅ Parsed: $TITLE"
           
           # Save outputs
           echo "title=$TITLE" >> $GITHUB_OUTPUT
