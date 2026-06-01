@@ -1,140 +1,91 @@
-name: 🤖 AI Blog Generator
+name: AI Blog Generator
 
 on:
-  workflow_dispatch:  # Manual trigger for testing
+  workflow_dispatch:
 
 jobs:
-  generate-blog:
+  generate:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     
     steps:
-      - name: Generate Blog Content
-        id: gemini
+      - uses: actions/checkout@v4
+      
+      - name: Generate Blog
+        id: blog
         run: |
-          # Classical blog structure prompt
-          PROMPT="You are a senior tech content strategist for Novox Edtech LLP, a premier IT training institute in Calicut, Kerala. Write a comprehensive, authoritative blog post (2500+ words) on current 2026 tech trends relevant to our audience.
+          # Build prompt
+          cat > /tmp/prompt.txt << 'PROMPT'
+You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2500+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and tool recommendations.
 
-REQUIRED STRUCTURE:
-1. HEADLINE: Compelling, specific title with year 2026
-2. INTRODUCTION: Hook with statistic or bold statement (2-3 paragraphs)
-3. TABLE OF CONTENTS: List of 6-8 major sections
-4. MAIN CONTENT: 
-   - Each section 300-400 words
-   - Use <h2> for section headers
-   - Include real data, salary figures, hiring stats
-   - Include 1-2 comparison tables using <table>
-   - Include 2-3 Pro Tips in <blockquote>
-   - Include 1 Common Mistake warning
-5. SALARY BENCHMARK TABLE: 2026 Kerala IT salary data
-6. KEY TAKEAWAYS: Bullet list of actionable insights
-7. CONCLUSION: Summary + call to action
-8. ABOUT AUTHOR: Brief Novox Edtech mention
-
-FORMATTING RULES:
-- Use clean semantic HTML: <h2>, <h3>, <p>, <ul>, <li>, <strong>, <table>, <tr>, <th>, <td>, <blockquote>
-- NO markdown symbols (#, **, ```)
-- NO generic fluff like 'In today's fast-paced world'
-- Every paragraph must contain specific data or actionable advice
-
-SEO REQUIREMENTS:
-- Naturally include 'best software training institute in Calicut' 2 times
-- Naturally include 'IT training in Kozhikode' 1 time
-- Include target keywords in first 100 words
-
-OUTPUT FORMAT:
-Return ONLY this exact structure:
+Return ONLY this format:
 
 TITLE: [Your Title]
 CATEGORY: [Technology Trends / Career Guidance / Web Development]
-SUMMARY: [2-sentence compelling summary]
+SUMMARY: [2-sentence summary]
 TAGS: [tag1, tag2, tag3]
 KEYWORDS: [keyword1, keyword2, keyword3]
-IMAGE_PROMPT: [Short description for AI thumbnail]
 
 CONTENT:
-[Full HTML content following structure above]"
+[Full HTML content using h2, h3, p, ul, li, strong, table, blockquote tags]
+PROMPT
+
+          # Call Gemini API
+          PROMPT_TEXT=$(cat /tmp/prompt.txt)
           
-          echo "🌐 Calling Gemini API..."
-          
-          PAYLOAD=$(jq -n \
-            --arg prompt "$PROMPT" \
-            '{
-              contents: [{parts: [{text: $prompt}]}],
-              generationConfig: {temperature: 0.7, "maxOutputTokens": 8192},
-              tools: [{"googleSearch": {}}]
-            }')
-          
-          RESPONSE=$(curl -s -X POST \
+          curl -s -X POST \
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-          
-          ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error.message // empty')
-          if [ ! -z "$ERROR_MSG" ]; then
-            echo "❌ API Error: $ERROR_MSG"
+            -d '{
+              "contents": [{"parts": [{"text": "'"$PROMPT_TEXT"'"}]}],
+              "generationConfig": {"temperature": 0.7, "maxOutputTokens": 8192},
+              "tools": [{"googleSearch": {}}]
+            }' > /tmp/api_response.json
+
+          # Check for API error
+          if grep -q '"error"' /tmp/api_response.json; then
+            echo "API Error:"
+            cat /tmp/api_response.json
             exit 1
           fi
+
+          # Extract text content
+          cat /tmp/api_response.json | jq -r '.candidates[0].content.parts[0].text' > /tmp/blog_text.txt
           
-          echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text' > /tmp/raw.txt
-          echo "✅ Text extracted ($(wc -c < /tmp/raw.txt) chars)"
-          
-          # Parse using Python
-          python3 << 'PYEOF'
-          import re
+          echo "Extracted text:"
+          head -c 500 /tmp/blog_text.txt
+          echo "..."
 
-          with open('/tmp/raw.txt', 'r') as f:
-              text = f.read()
-
-          def extract_field(pattern, text, default=""):
-              match = re.search(pattern, text, re.DOTALL)
-              return match.group(1).strip() if match else default
-
-          title = extract_field(r'TITLE:\s*(.*?)(?=\nCATEGORY:)', text, "Untitled Blog")
-          category = extract_field(r'CATEGORY:\s*(.*?)(?=\nSUMMARY:)', text, "Technology Trends")
-          summary = extract_field(r'SUMMARY:\s*(.*?)(?=\nTAGS:)', text, "No summary")
-          tags = extract_field(r'TAGS:\s*(.*?)(?=\nKEYWORDS:)', text, "Tech 2026")
-          keywords = extract_field(r'KEYWORDS:\s*(.*?)(?=\nIMAGE_PROMPT:)', text, "Novox Edtech")
-          image_prompt = extract_field(r'IMAGE_PROMPT:\s*(.*?)(?=\nCONTENT:)', text, "technology education 2026")
-          content = extract_field(r'CONTENT:\s*(.*)', text, text)
-
-          # Generate image URL
-          image_url = f"https://image.pollinations.ai/prompt/{image_prompt.replace(' ', '%20')}?width=1200&height=630&nologo=true"
-
-          # Save all fields
-          for name, value in [
-              ('title', title), ('category', category), ('summary', summary),
-              ('tags', tags), ('keywords', keywords), ('image_prompt', image_prompt),
-              ('image_url', image_url), ('content', content)
-          ]:
-              with open(f'/tmp/{name}.txt', 'w') as f:
-                  f.write(value)
-
-          print(f"✅ Parsed: {title}")
-          print(f"📂 Category: {category}")
-          print(f"🖼️ Image: {image_prompt}")
-          PYEOF
-          
-          # Save to GitHub outputs with unique delimiters
-          for name in ['title', 'category', 'summary', 'tags', 'keywords', 'image_url', 'content']:
-              delim = f"DELIM_{name}_{$(date +%s)}"
-              echo "${name}<<${delim}" >> $GITHUB_OUTPUT
-              cat /tmp/${name}.txt >> $GITHUB_OUTPUT
-              echo "${delim}" >> $GITHUB_OUTPUT
-          
-      - name: Create GitHub Issue with Classical Structure
+      - name: Parse and Create Issue
         uses: actions/github-script@v7
         with:
           script: |
-            const title = '${{ steps.gemini.outputs.title }}';
-            const category = '${{ steps.gemini.outputs.category }}';
-            const summary = '${{ steps.gemini.outputs.summary }}';
-            const tags = '${{ steps.gemini.outputs.tags }}';
-            const keywords = '${{ steps.gemini.outputs.keywords }}';
-            const imageUrl = '${{ steps.gemini.outputs.image_url }}';
-            const content = `${{ steps.gemini.outputs.content }}`;
+            const fs = require('fs');
             
+            // Read the generated text
+            const text = fs.readFileSync('/tmp/blog_text.txt', 'utf8');
+            
+            // Simple parsing
+            const titleMatch = text.match(/TITLE:\s*(.+)/);
+            const categoryMatch = text.match(/CATEGORY:\s*(.+)/);
+            const summaryMatch = text.match(/SUMMARY:\s*(.+)/);
+            const tagsMatch = text.match(/TAGS:\s*(.+)/);
+            const keywordsMatch = text.match(/KEYWORDS:\s*(.+)/);
+            const contentMatch = text.match(/CONTENT:\s*([\s\S]+)/);
+            
+            const title = titleMatch ? titleMatch[1].trim() : 'Untitled Blog Post';
+            const category = categoryMatch ? categoryMatch[1].trim() : 'Technology';
+            const summary = summaryMatch ? summaryMatch[1].trim() : '';
+            const tags = tagsMatch ? tagsMatch[1].trim() : 'Tech 2026';
+            const keywords = keywordsMatch ? keywordsMatch[1].trim() : 'Novox Edtech';
+            const content = contentMatch ? contentMatch[1].trim() : text;
+            
+            // Generate image URL
+            const imagePrompt = encodeURIComponent(title.substring(0, 50));
+            const imageUrl = `https://image.pollinations.ai/prompt/${imagePrompt}?width=1200&height=630&nologo=true`;
+            
+            // Build issue body
             const body = `![Blog Thumbnail](${imageUrl})
 
 # ${title}
@@ -149,28 +100,18 @@ ${content}
 
 ---
 
-## 🏷️ Tags
-${tags.split(',').map(t => `- ${t.trim()}`).join('\n')}
-
-## 🔑 Keywords
-${keywords}
-
----
-
-*This article was generated by Novox AI Blog System to provide the latest insights for tech professionals in Kerala.*
-
-**Ready to upskill?** Join the **best software training institute in Calicut** and transform your career with hands-on training in MERN Stack, Flutter, Python + React, and more.
-
-📍 **Novox Edtech LLP** | Calicut, Kerala
-🌐 [novoxedtechllp.com](https://novoxedtechllp.com)
+🏷️ **Tags:** ${tags}
+🔑 **Keywords:** ${keywords}
+🤖 **Generated by Novox AI** | 📅 ${new Date().toISOString()}
 `;
-            
+
+            // Create issue
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: title,
               body: body,
-              labels: ['blog', 'ai-generated', '2026', category.toLowerCase().replace(/\s+/g, '-')]
+              labels: ['blog', 'ai-generated', '2026']
             });
             
-            console.log(`✅ Created issue: ${title}`);
+            console.log(`Created issue: ${title}`);
