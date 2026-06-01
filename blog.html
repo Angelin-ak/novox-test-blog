@@ -5,261 +5,372 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Novox Edtech | Blog</title>
     <style>
-        /* Reset */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        /* Typography */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            font-size: 18px;
-            line-height: 1.8;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8f9fa;
             color: #333;
-            background: #fafafa;
+            line-height: 1.6;
         }
-        
-        /* Container */
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
+
         /* Header */
         .site-header {
-            background: #1a1a2e;
-            color: white;
-            padding: 40px 0;
-            text-align: center;
-            border-bottom: 4px solid #e94560;
-        }
-        
-        .site-header h1 {
-            font-family: 'Arial', sans-serif;
-            font-size: 2.2em;
-            font-weight: 700;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-        
-        .site-header p {
-            font-family: 'Arial', sans-serif;
-            font-size: 0.95em;
-            opacity: 0.8;
-            margin-top: 10px;
-        }
-        
-        /* Blog List */
-        .blog-list {
-            padding: 60px 0;
-        }
-        
-        .blog-item {
             background: white;
-            border: 1px solid #e0e0e0;
-            margin-bottom: 40px;
-            padding: 40px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            cursor: pointer;
+            padding: 20px 0;
+            border-bottom: 1px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        
-        .blog-item:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        
-        .blog-meta {
-            font-family: 'Arial', sans-serif;
-            font-size: 0.85em;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-        }
-        
-        .blog-item h2 {
-            font-family: 'Arial', sans-serif;
-            font-size: 1.8em;
-            font-weight: 700;
-            color: #1a1a2e;
-            margin-bottom: 15px;
-            line-height: 1.3;
-        }
-        
-        .blog-excerpt {
-            color: #555;
-            margin-bottom: 20px;
-        }
-        
-        .blog-footer {
-            font-family: 'Arial', sans-serif;
-            font-size: 0.85em;
-            color: #888;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-            margin-top: 20px;
-        }
-        
-        .read-more {
-            color: #e94560;
-            font-weight: 600;
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             text-decoration: none;
         }
-        
-        /* Full Article View (hidden by default) */
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: #2563eb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .logo-text {
+            color: #1e293b;
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        .logo-text span {
+            color: #2563eb;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #64748b;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            color: #2563eb;
+        }
+
+        /* Blog Grid */
+        .blog-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .blog-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .blog-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .blog-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .blog-content {
+            padding: 25px;
+        }
+
+        .blog-meta-top {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .blog-category {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .category-career {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .category-tech {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .category-education {
+            background: #fce7f3;
+            color: #9d174d;
+        }
+
+        .blog-date {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+
+        .blog-date::before {
+            content: "📅";
+            font-size: 0.9em;
+        }
+
+        .blog-card h2 {
+            font-size: 1.25em;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+            margin-bottom: 20px;
+        }
+
+        .blog-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 15px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .read-btn {
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 0.95em;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .read-btn::after {
+            content: "→";
+            transition: transform 0.2s;
+        }
+
+        .blog-card:hover .read-btn::after {
+            transform: translateX(5px);
+        }
+
+        /* Article View */
         .article-view {
             display: none;
             background: white;
-            padding: 60px 0;
             min-height: 100vh;
         }
-        
+
         .article-view.active {
             display: block;
         }
-        
+
+        .article-hero {
+            width: 100%;
+            max-height: 500px;
+            object-fit: cover;
+        }
+
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
         .article-header {
-            text-align: center;
-            margin-bottom: 60px;
-            padding-bottom: 40px;
-            border-bottom: 2px solid #1a1a2e;
+            margin-bottom: 40px;
         }
-        
-        .article-header h1 {
-            font-family: 'Arial', sans-serif;
+
+        .article-title {
             font-size: 2.5em;
-            font-weight: 700;
-            color: #1a1a2e;
-            margin-bottom: 20px;
+            font-weight: 800;
+            color: #1e293b;
             line-height: 1.2;
+            margin-bottom: 20px;
         }
-        
-        .article-meta {
-            font-family: 'Arial', sans-serif;
-            font-size: 0.9em;
-            color: #888;
+
+        .article-author {
+            color: #64748b;
+            font-style: italic;
+            margin-bottom: 30px;
         }
-        
+
         .article-content {
-            font-size: 1.05em;
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #374151;
         }
-        
+
         .article-content h2 {
-            font-family: 'Arial', sans-serif;
-            font-size: 1.6em;
+            font-size: 1.8em;
             font-weight: 700;
-            color: #1a1a2e;
+            color: #1e293b;
             margin: 40px 0 20px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #e94560;
+            border-bottom: 2px solid #e5e7eb;
         }
-        
+
         .article-content h3 {
-            font-family: 'Arial', sans-serif;
-            font-size: 1.3em;
+            font-size: 1.4em;
             font-weight: 600;
-            color: #333;
+            color: #374151;
             margin: 30px 0 15px;
         }
-        
+
         .article-content p {
             margin-bottom: 20px;
         }
-        
+
         .article-content blockquote {
-            border-left: 4px solid #e94560;
-            padding: 20px 30px;
-            margin: 30px 0;
-            background: #f8f9fa;
+            border-left: 4px solid #2563eb;
+            padding: 20px 25px;
+            margin: 25px 0;
+            background: #f8fafc;
             font-style: italic;
-            color: #555;
+            color: #475569;
         }
-        
+
         .article-content table {
             width: 100%;
             border-collapse: collapse;
-            margin: 30px 0;
+            margin: 25px 0;
             font-size: 0.95em;
         }
-        
+
         .article-content th {
-            background: #1a1a2e;
+            background: #1e293b;
             color: white;
-            padding: 15px;
+            padding: 14px;
             text-align: left;
-            font-family: 'Arial', sans-serif;
             font-weight: 600;
         }
-        
+
         .article-content td {
-            padding: 15px;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 14px;
+            border-bottom: 1px solid #e5e7eb;
         }
-        
+
         .article-content tr:hover {
-            background: #f8f9fa;
+            background: #f8fafc;
         }
-        
-        .article-content ul, .article-content ol {
+
+        .article-content ul,
+        .article-content ol {
             margin: 20px 0 20px 30px;
         }
-        
+
         .article-content li {
             margin-bottom: 10px;
         }
-        
+
         .article-content strong {
-            color: #1a1a2e;
-        }
-        
-        .article-image {
-            width: 100%;
-            max-height: 400px;
-            object-fit: cover;
-            margin: 30px 0;
-        }
-        
-        .back-link {
-            display: inline-block;
-            margin-top: 40px;
-            color: #e94560;
-            text-decoration: none;
-            font-family: 'Arial', sans-serif;
+            color: #1e293b;
             font-weight: 600;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: #f1f5f9;
+            color: #475569;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
             cursor: pointer;
+            border: none;
+            font-size: 1em;
         }
-        
-        .article-meta-footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            font-family: 'Arial', sans-serif;
-            font-size: 0.9em;
-            color: #888;
+
+        .back-btn:hover {
+            background: #e2e8f0;
         }
-        
+
         /* Loading */
         .loading {
             text-align: center;
-            padding: 80px 20px;
-            color: #888;
+            padding: 100px 20px;
+            color: #94a3b8;
+            font-size: 1.1em;
         }
-        
+
         /* Error */
         .error {
             text-align: center;
-            padding: 40px;
-            color: #e94560;
-            background: #fdf2f2;
-            border: 1px solid #fcc;
+            padding: 60px 20px;
+            color: #dc2626;
         }
-        
-        /* Footer */
-        .site-footer {
-            background: #1a1a2e;
-            color: white;
-            text-align: center;
-            padding: 40px 0;
-            font-family: 'Arial', sans-serif;
-            font-size: 0.9em;
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .blog-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .blog-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-menu {
+                display: none;
+            }
+            
+            .article-title {
+                font-size: 1.8em;
+            }
         }
     </style>
 </head>
@@ -267,34 +378,41 @@
 
     <!-- Header -->
     <header class="site-header">
-        <div class="container">
-            <h1>Novox Edtech</h1>
-            <p>Professional IT Training Institute | Calicut, Kerala</p>
+        <div class="header-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">N</div>
+                <div class="logo-text">Novox <span>Edtech</span></div>
+            </a>
+            <nav>
+                <ul class="nav-menu">
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Courses</a></li>
+                    <li><a href="#">Instructors</a></li>
+                    <li><a href="#">Placement</a></li>
+                    <li><a href="#">Gallery</a></li>
+                    <li><a href="#" class="active">Blog</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </nav>
         </div>
     </header>
 
-    <!-- Blog List View -->
-    <main id="list-view" class="blog-list">
-        <div class="container">
-            <div id="blogs-container" class="loading">Loading articles...</div>
+    <!-- Blog List -->
+    <main id="list-view" class="blog-section">
+        <div class="blog-grid" id="blogs-container">
+            <div class="loading">Loading articles...</div>
         </div>
     </main>
 
-    <!-- Full Article View (hidden by default) -->
+    <!-- Article View -->
     <main id="article-view" class="article-view">
-        <div class="container">
-            <div id="article-container"></div>
-            <span class="back-link" onclick="showList()">← Back to All Articles</span>
+        <img id="article-hero" class="article-hero" src="" alt="">
+        <div class="article-container">
+            <button class="back-btn" onclick="showList()">← Back to Blog</button>
+            <div id="article-content"></div>
         </div>
     </main>
-
-    <!-- Footer -->
-    <footer class="site-footer">
-        <div class="container">
-            <p> 2026 Novox Edtech LLP. All rights reserved.</p>
-            <p>Best Software Training Institute in Calicut</p>
-        </div>
-    </footer>
 
     <script>
         const GITHUB_USER = 'Angelin-ak';
@@ -303,7 +421,25 @@
 
         let allIssues = [];
 
-        // Load blog list
+        // Get category class
+        function getCategoryClass(category) {
+            const cat = category.toLowerCase();
+            if (cat.includes('career') || cat.includes('placement')) return 'category-career';
+            if (cat.includes('tech') || cat.includes('programming')) return 'category-tech';
+            return 'category-education';
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        // Load blogs
         async function loadBlogs() {
             const container = document.getElementById('blogs-container');
             
@@ -315,42 +451,53 @@
                 allIssues = issues;
                 
                 if (issues.length === 0) {
-                    container.innerHTML = '<div class="error">No articles published yet.</div>';
+                    container.innerHTML = '<div class="error">No articles yet. Run the workflow!</div>';
                     return;
                 }
 
                 issues.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-                container.className = 'blog-list';
                 container.innerHTML = issues.map(issue => {
                     const body = issue.body || '';
-                    const summaryMatch = body.match(/>\s*(.+?)(?=\n\n)/s);
-                    const summary = summaryMatch ? summaryMatch[1] : 'Click to read full article...';
+                    
+                    // Extract image
+                    const imgMatch = body.match(/!\[Blog Thumbnail\]\((.+?)\)/);
+                    const imageUrl = imgMatch ? imgMatch[1] : 'https://via.placeholder.com/800x500/2563eb/ffffff?text=Novox+Blog';
+                    
+                    // Extract summary
+                    const summaryMatch = body.match(/> (.+?)(?=\n\n)/);
+                    const summary = summaryMatch ? summaryMatch[1] : 'Click to read more...';
+                    
+                    // Extract category
                     const catMatch = body.match(/\*\*Category:\*\*\s*(.+?)\s*\|/);
                     const category = catMatch ? catMatch[1].trim() : 'Technology';
-                    const date = new Date(issue.created_at).toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'long', day: 'numeric'
-                    });
                     
+                    // Extract date
+                    const date = formatDate(issue.created_at);
+
                     return `
-                        <article class="blog-item" onclick="showArticle(${issue.number})">
-                            <div class="blog-meta">${category} | ${date}</div>
-                            <h2>${issue.title}</h2>
-                            <p class="blog-excerpt">${summary}</p>
-                            <div class="blog-footer">
-                                <span>Issue #${issue.number}</span>
-                                <span class="read-more">Read Full Article →</span>
+                        <article class="blog-card" onclick="showArticle(${issue.number})">
+                            <img class="blog-image" src="${imageUrl}" alt="${issue.title}" onerror="this.src='https://via.placeholder.com/800x500/2563eb/ffffff?text=Novox+Blog'">
+                            <div class="blog-content">
+                                <div class="blog-meta-top">
+                                    <span class="blog-category ${getCategoryClass(category)}">${category}</span>
+                                    <span class="blog-date">${date}</span>
+                                </div>
+                                <h2>${issue.title}</h2>
+                                <div class="blog-footer">
+                                    <span class="read-btn">Read</span>
+                                </div>
                             </div>
                         </article>
                     `;
                 }).join('');
 
             } catch (error) {
-                container.innerHTML = `<div class="error">Failed to load articles: ${error.message}</div>`;
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
             }
         }
 
-        // Show full article
+        // Show article
         function showArticle(issueNumber) {
             const issue = allIssues.find(i => i.number === issueNumber);
             if (!issue) return;
@@ -361,49 +508,51 @@
             const imgMatch = body.match(/!\[Blog Thumbnail\]\((.+?)\)/);
             const imageUrl = imgMatch ? imgMatch[1] : '';
             
-            // Extract content (remove image and meta)
+            // Extract content
             let content = body.replace(/!\[Blog Thumbnail\]\(.+?\)\n\n/, '');
-            content = content.replace(/---\n\n## 🏷️ Tags[\s\S]*$/, '');
+            content = content.replace(/---\n\n🏷️[\s\S]*$/, '');
             
             // Extract meta
-            const metaMatch = body.match(/## 🏷️ Tags[\s\S]*$/);
+            const metaMatch = body.match(/🏷️[\s\S]*$/);
             const meta = metaMatch ? metaMatch[0] : '';
             
-            // Extract category and date
+            // Extract category
             const catMatch = body.match(/\*\*Category:\*\*\s*(.+?)\s*\|/);
             const category = catMatch ? catMatch[1].trim() : 'Technology';
-            const date = new Date(issue.created_at).toLocaleDateString('en-US', {
-                year: 'numeric', month: 'long', day: 'numeric'
-            });
+            
+            const date = formatDate(issue.created_at);
 
-            document.getElementById('article-container').innerHTML = `
+            // Set hero image
+            document.getElementById('article-hero').src = imageUrl;
+            
+            // Build article HTML
+            document.getElementById('article-content').innerHTML = `
                 <div class="article-header">
-                    <div class="article-meta">${category} | ${date} | Issue #${issue.number}</div>
-                    <h1>${issue.title}</h1>
+                    <div class="article-author">Published by Novoxed Tech LLP | ${date}</div>
+                    <h1 class="article-title">${issue.title}</h1>
                 </div>
-                ${imageUrl ? `<img class="article-image" src="${imageUrl}" alt="${issue.title}">` : ''}
                 <div class="article-content">
                     ${content}
                 </div>
-                <div class="article-meta-footer">
-                    ${meta}
+                <div style="margin-top: 40px; padding: 20px; background: #f8fafc; border-radius: 8px;">
+                    ${meta.replace(/\n/g, '<br>')}
                 </div>
             `;
 
-            // Hide list, show article
+            // Switch views
             document.getElementById('list-view').style.display = 'none';
             document.getElementById('article-view').classList.add('active');
             window.scrollTo(0, 0);
         }
 
-        // Show list view
+        // Show list
         function showList() {
             document.getElementById('article-view').classList.remove('active');
             document.getElementById('list-view').style.display = 'block';
             window.scrollTo(0, 0);
         }
 
-        // Load on page load
+        // Load on start
         loadBlogs();
     </script>
 
