@@ -12,151 +12,74 @@ jobs:
       issues: write
     
     steps:
-      - name: Fetch Website Data Dynamically
+      - name: Fetch Website Data
         id: website
         run: |
-          echo "🌐 Fetching website data from Novox Edtech..."
+          echo "🌐 Fetching website data..."
           
-          # Fetch pages
-          curl -s --max-time 15 https://novoxedtechllp.com/courses > /tmp/courses.html 2>/dev/null || echo "Failed courses"
-          curl -s --max-time 15 https://novoxedtechllp.com/about > /tmp/about.html 2>/dev/null || echo "Failed about"
-          curl -s --max-time 15 https://novoxedtechllp.com > /tmp/home.html 2>/dev/null || echo "Failed home"
+          curl -s --max-time 15 https://novoxedtechllp.com/courses > /tmp/courses.html 2>/dev/null || echo "Failed"
+          curl -s --max-time 15 https://novoxedtechllp.com/about > /tmp/about.html 2>/dev/null || echo "Failed"
+          curl -s --max-time 15 https://novoxedtechllp.com > /tmp/home.html 2>/dev/null || echo "Failed"
           
-          # ============================================
-          # EXTRACT COURSES — Simple patterns
-          # ============================================
-          echo "🔍 Extracting courses..."
+          # Extract courses
+          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/courses.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > /tmp/extracted.txt
+          grep -oi 'title="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/title="//;s/"$//' >> /tmp/extracted.txt
+          grep -oi 'alt="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/alt="//;s/"$//' >> /tmp/extracted.txt
           
-          # Extract text from h1-h6 tags (remove HTML tags)
-          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/courses.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > /tmp/extracted_courses.txt
+          cat /tmp/extracted.txt | grep -vi "^courses$\|^home$\|^about$\|^contact$" | sort -u | grep -v "^$" | head -15 > /tmp/courses_clean.txt
           
-          # Extract from title attributes
-          grep -oi 'title="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/title="//;s/"$//' >> /tmp/extracted_courses.txt
+          echo "📋 Courses found:"
+          cat /tmp/courses_clean.txt || echo "None"
           
-          # Extract from alt attributes
-          grep -oi 'alt="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/alt="//;s/"$//' >> /tmp/extracted_courses.txt
-          
-          # Extract from meta description
-          grep -oi 'content="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/content="//;s/"$//' >> /tmp/extracted_courses.txt
-          
-          # Clean up: remove generic words, keep course-like terms
-          cat /tmp/extracted_courses.txt | grep -vi "^courses$\|^home$\|^about$\|^contact$\|^blog$" | sort -u | grep -v "^$" | head -15 > /tmp/courses_clean.txt
-          
-          echo "📋 Found courses:"
-          cat /tmp/courses_clean.txt || echo "No courses found"
-          
-          # ============================================
-          # EXTRACT ABOUT INFO
-          # ============================================
-          echo "🔍 Extracting about info..."
-          
-          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/about.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > /tmp/extracted_about.txt
-          grep -oi '<p[^>]*>[^<]*' /tmp/about.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v "^$" | head -5 >> /tmp/extracted_about.txt
-          
-          cat /tmp/extracted_about.txt | sort -u | grep -v "^$" | head -10 > /tmp/about_clean.txt
-          
-          echo "📋 Found about info:"
-          cat /tmp/about_clean.txt || echo "No about info found"
-          
-          # ============================================
-          # EXTRACT KEYWORDS FROM HOMEPAGE
-          # ============================================
-          echo "🔍 Extracting homepage keywords..."
-          
-          grep -oi '<meta[^>]*keywords[^>]*>' /tmp/home.html 2>/dev/null | sed 's/.*content="//;s/".*//' > /tmp/keywords.txt
-          grep -oi '<title>[^<]*' /tmp/home.html 2>/dev/null | sed 's/<title>//' >> /tmp/keywords.txt
-          
-          # ============================================
-          # BUILD DYNAMIC TOPIC LIST
-          # ============================================
-          echo "🏗️ Building dynamic topic list..."
-          
+          # Build website data
           {
             echo "=== COURSES ==="
             cat /tmp/courses_clean.txt
-            echo ""
-            echo "=== ABOUT ==="
-            cat /tmp/about_clean.txt
-            echo ""
-            echo "=== KEYWORDS ==="
-            cat /tmp/keywords.txt
           } > /tmp/website_data.txt
           
           echo "website_data<<EOF" >> $GITHUB_OUTPUT
           cat /tmp/website_data.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
-          echo "courses<<EOF" >> $GITHUB_OUTPUT
-          cat /tmp/courses_clean.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Select Topic from Website Data
+      - name: Select Topic
         id: topic
         run: |
           COURSES=$(cat /tmp/courses_clean.txt)
           
-          echo "🎯 Selecting topic based on website data..."
-          
-          # Detect courses with simple string matching
-          HAS_MERN=$(echo "$COURSES" | grep -ci "mern\|react\|node\|mongo" || echo "0")
-          HAS_FLUTTER=$(echo "$COURSES" | grep -ci "flutter\|dart\|mobile" || echo "0")
-          HAS_PYTHON=$(echo "$COURSES" | grep -ci "python\|django\|data" || echo "0")
+          HAS_MERN=$(echo "$COURSES" | grep -ci "mern\|react\|node" || echo "0")
+          HAS_FLUTTER=$(echo "$COURSES" | grep -ci "flutter\|dart" || echo "0")
+          HAS_PYTHON=$(echo "$COURSES" | grep -ci "python\|django" || echo "0")
           HAS_UIUX=$(echo "$COURSES" | grep -ci "ui\|ux\|design\|figma" || echo "0")
-          HAS_MARKETING=$(echo "$COURSES" | grep -ci "digital\|marketing\|seo\|social" || echo "0")
+          HAS_MARKETING=$(echo "$COURSES" | grep -ci "digital\|marketing\|seo" || echo "0")
           
-          echo "Detection: MERN=$HAS_MERN, Flutter=$HAS_FLUTTER, Python=$HAS_PYTHON, UI/UX=$HAS_UIUX, Marketing=$HAS_MARKETING"
-          
-          # Build topic pool
           TOPIC_POOL=()
           
-          if [ "$HAS_MERN" -gt 0 ]; then
-            TOPIC_POOL+=("mern:TECH:Tech & Programming:MERN Stack Development:Latest trends in MERN Stack, React, Node.js, and MongoDB for full-stack developers")
-          fi
+          [ "$HAS_MERN" -gt 0 ] && TOPIC_POOL+=("mern:TECH:Tech & Programming:MERN Stack Development:Latest trends in MERN Stack, React, Node.js for full-stack developers")
+          [ "$HAS_FLUTTER" -gt 0 ] && TOPIC_POOL+=("flutter:TECH:Tech & Programming:Flutter Development:Cross-platform mobile development with Flutter and Dart")
+          [ "$HAS_PYTHON" -gt 0 ] && TOPIC_POOL+=("python:TECH:Tech & Programming:Python & Data Science:Python programming, data science, and AI integration trends")
+          [ "$HAS_UIUX" -gt 0 ] && TOPIC_POOL+=("ui:DESIGN:UI/UX Design:UI/UX Design:Latest UI/UX design trends, Figma, and prototyping")
+          [ "$HAS_MARKETING" -gt 0 ] && TOPIC_POOL+=("digital:MARKETING:Digital Marketing:Digital Marketing:SEO, content marketing, and social media strategies")
           
-          if [ "$HAS_FLUTTER" -gt 0 ]; then
-            TOPIC_POOL+=("flutter:TECH:Tech & Programming:Flutter Development:Cross-platform mobile development with Flutter, Dart, and responsive design trends")
-          fi
+          TOPIC_POOL+=("placement:CAREER:Career & Placement:Placement & Jobs:Job market trends and interview preparation for Kerala tech graduates")
+          TOPIC_POOL+=("career:CAREER:Career & Placement:Career Growth:Career advancement and salary negotiation for IT professionals")
+          TOPIC_POOL+=("education:EDUCATION:Education & Learning:IT Education:IT education trends and skill development in Calicut")
           
-          if [ "$HAS_PYTHON" -gt 0 ]; then
-            TOPIC_POOL+=("python:TECH:Tech & Programming:Python & Data Science:Python programming, data science, machine learning, and AI integration trends")
-          fi
-          
-          if [ "$HAS_UIUX" -gt 0 ]; then
-            TOPIC_POOL+=("ui:DESIGN:UI/UX Design:UI/UX Design:Latest UI/UX design trends, Figma, prototyping, and design systems")
-            TOPIC_POOL+=("ux:DESIGN:UI/UX Design:User Experience:User research, usability testing, and experience design trends")
-          fi
-          
-          if [ "$HAS_MARKETING" -gt 0 ]; then
-            TOPIC_POOL+=("digital:MARKETING:Digital Marketing:Digital Marketing:Digital marketing strategies, SEO, content marketing, and analytics trends")
-            TOPIC_POOL+=("seo:MARKETING:Digital Marketing:SEO & Content:Search engine optimization, content strategy, and organic growth trends")
-          fi
-          
-          # Universal topics (always included)
-          TOPIC_POOL+=("placement:CAREER:Career & Placement:Placement & Jobs:Job market trends, interview preparation, and placement strategies for Kerala tech graduates")
-          TOPIC_POOL+=("career:CAREER:Career & Placement:Career Growth:Career advancement, salary negotiation, and professional development for IT professionals")
-          TOPIC_POOL+=("education:EDUCATION:Education & Learning:IT Education:IT education trends, learning methodologies, and skill development in Calicut")
-          TOPIC_POOL+=("learning:EDUCATION:Education & Learning:Learning Paths:Effective learning strategies, bootcamp vs degree, and self-paced learning trends")
-          
-          # Select based on day
           DAY=$(date +%u)
           WEEK_OF_MONTH=$(( ($(date +%d) - 1) / 7 + 1 ))
+          INDEX=$(( (DAY + WEEK_OF_MONTH - 1) % ${#TOPIC_POOL[@]} ))
           
-          POOL_SIZE=${#TOPIC_POOL[@]}
-          INDEX=$(( (DAY + WEEK_OF_MONTH - 1) % POOL_SIZE ))
+          IFS=: read -r keyword topic category focus_desc <<< "${TOPIC_POOL[$INDEX]}"
           
-          SELECTED="${TOPIC_POOL[$INDEX]}"
-          
-          IFS=: read -r keyword topic category focus_desc <<< "$SELECTED"
-          
-          echo "✅ Selected: $keyword → $topic → $category"
-          echo "📝 Focus: $focus_desc"
+          [ -z "$topic" ] && { topic="TECH"; category="Tech & Programming"; focus_desc="Latest technology trends in software development"; }
           
           echo "topic=$topic" >> $GITHUB_OUTPUT
           echo "category=$category" >> $GITHUB_OUTPUT
           echo "focus=$focus_desc" >> $GITHUB_OUTPUT
           echo "keyword=$keyword" >> $GITHUB_OUTPUT
+          
+          echo "✅ Selected: $keyword → $topic"
 
-      - name: Generate Blog
+      - name: Generate Blog with Gemini
         uses: actions/github-script@v7
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -170,61 +93,57 @@ jobs:
             const keyword = "${{ steps.topic.outputs.keyword }}";
             const year = new Date().getFullYear();
             const month = new Date().toLocaleString('en-US', { month: 'long' });
-            
             const websiteData = `${{ steps.website.outputs.website_data }}`;
             
-            const prompt = "You are a senior content strategist for Novox Edtech LLP, a premier IT training institute in Calicut, Kerala.\n\n" +
-              "WEBSITE CONTEXT:\n" +
-              "Extracted from Novox website:\n" +
-              websiteData + "\n\n" +
-              "Based on this content, write a comprehensive blog post (2500+ words) about " + focus + ".\n\n" +
-              "TIME: " + month + " " + year + "\n" +
-              "AUDIENCE: Aspiring developers, career switchers in Kerala\n\n" +
-              "STRUCTURE:\n" +
-              "1. HEADLINE: Compelling title\n" +
-              "2. INTRODUCTION: Hook with Kerala/India tech statistic\n" +
-              "3. MAIN CONTENT (6-8 sections with h2):\n" +
-              "   - Specific salary data, hiring numbers\n" +
-              "   - HTML comparison tables\n" +
-              "   - 2-3 Pro Tips in blockquote\n" +
-              "   - 1 Common Mistake warning\n" +
-              "4. SALARY TABLE: Kerala IT salaries\n" +
-              "5. KEY TAKEAWAYS: 5-7 bullets\n" +
-              "6. CONCLUSION: Summary + call to action\n" +
-              "7. ABOUT: Novox Edtech as best software training institute in Calicut\n\n" +
-              "SEO: Include 'best software training institute in Calicut' 2x, 'IT training in Kozhikode' 1x\n\n" +
-              "FORMAT: HTML only (h2, h3, p, ul, li, strong, table, blockquote). NO markdown.\n\n" +
-              "OUTPUT:\n" +
-              "TITLE: [Title]\n" +
+            // SHORTER PROMPT — 1575 words target
+            const prompt = "You are a senior content strategist for Novox Edtech LLP, an IT training institute in Calicut, Kerala. Write a detailed blog post (MINIMUM 1575 words) about " + focus + ".\n\n" +
+              "WEBSITE DATA:\n" + websiteData + "\n\n" +
+              "REQUIREMENTS:\n" +
+              "- Write EXACTLY 1575-2000 words\n" +
+              "- 5-6 sections with h2 headings\n" +
+              "- Include 1 salary table, 2 pro tips, 1 common mistake\n" +
+              "- Include 'best software training institute in Calicut' 2x\n" +
+              "- Include 'IT training in Kozhikode' 1x\n" +
+              "- Use HTML tags only (h2, h3, p, ul, li, strong, table, blockquote)\n" +
+              "- NO markdown\n\n" +
+              "OUTPUT FORMAT (EXACTLY):\n" +
+              "TITLE: [Compelling Title for " + year + "]\n" +
               "CATEGORY: " + category + "\n" +
               "SUMMARY: [2 sentences]\n" +
-              "TAGS: [tag1, tag2, tag3]\n" +
-              "KEYWORDS: [kw1, kw2, kw3]\n" +
-              "IMAGE_PROMPT: [description]\n" +
+              "TAGS: [tag1, tag2]\n" +
+              "KEYWORDS: [kw1, kw2]\n" +
+              "IMAGE_PROMPT: [short description]\n" +
               "CONTENT:\n" +
-              "[HTML]";
+              "[HTML content]";
 
+            // Try models with longer delays
             const models = [
-              "gemini-2.5-flash",
-              "gemini-2.5-flash-lite",
-              "gemini-2.5-pro",
-              "gemini-2.0-flash",
-              "gemini-2.0-flash-lite"
+              { name: "gemini-2.5-flash", delay: 0 },
+              { name: "gemini-2.5-flash-lite", delay: 10000 },
+              { name: "gemini-2.0-flash", delay: 20000 },
+              { name: "gemini-2.0-flash-lite", delay: 30000 }
             ];
 
             let text = null;
             let usedModel = null;
 
             for (const model of models) {
+              console.log("🔄 Trying: " + model.name);
+              
+              if (model.delay > 0) {
+                console.log("⏳ Waiting " + (model.delay/1000) + "s...");
+                await new Promise(r => setTimeout(r, model.delay));
+              }
+              
               try {
                 const response = await fetch(
-                  "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + process.env.GEMINI_API_KEY,
+                  "https://generativelanguage.googleapis.com/v1beta/models/" + model.name + ":generateContent?key=" + process.env.GEMINI_API_KEY,
                   {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       contents: [{ parts: [{ text: prompt }] }],
-                      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+                      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
                       tools: [{ googleSearch: {} }]
                     })
                   }
@@ -233,25 +152,29 @@ jobs:
                 const data = await response.json();
                 
                 if (data.error) {
-                  console.log("❌ " + model + ": " + data.error.message);
-                  if (data.error.code === 429) await new Promise(r => setTimeout(r, 5000));
+                  console.log("❌ " + model.name + ": " + data.error.message);
                   continue;
                 }
 
                 text = data.candidates[0].content.parts[0].text;
-                usedModel = model;
-                console.log("✅ " + model + " succeeded!");
+                usedModel = model.name;
+                console.log("✅ Success with " + model.name);
                 break;
                 
               } catch (e) {
-                console.log("❌ " + model + " error: " + e.message);
+                console.log("❌ " + model.name + " error: " + e.message);
               }
             }
 
-            if (!text) throw new Error("All models failed");
+            if (!text) {
+              throw new Error("All Gemini models failed. Your quota may be exhausted. Try again tomorrow or use Groq.");
+            }
 
-            // Parse
-            let title = "Untitled";
+            console.log("📄 Response length: " + text.length);
+            console.log("First 400 chars:\n" + text.substring(0, 400));
+
+            // ROBUST PARSING — Multiple strategies
+            let title = null;
             let blogCategory = category;
             let summary = "";
             let tags = "Tech " + year;
@@ -259,29 +182,61 @@ jobs:
             let imagePrompt = "technology education";
             let content = text;
 
-            const titleMatch = text.match(/TITLE:\s*(.+?)(?=\nCATEGORY:)/s) || text.match(/TITLE:\s*(.+)/);
-            if (titleMatch) title = titleMatch[1].trim();
+            // Strategy 1: Find TITLE: marker
+            const titleMatch1 = text.match(/TITLE:\s*(.+?)(?=\nCATEGORY:)/s);
+            if (titleMatch1 && titleMatch1[1].trim()) title = titleMatch1[1].trim();
 
-            const catMatch = text.match(/CATEGORY:\s*(.+?)(?=\nSUMMARY:)/s);
+            // Strategy 2: Find TITLE: with just newline after
+            if (!title) {
+              const titleMatch2 = text.match(/TITLE:\s*([^\n]+)/);
+              if (titleMatch2 && titleMatch2[1].trim()) title = titleMatch2[1].trim();
+            }
+
+            // Strategy 3: First line if it looks like a title
+            if (!title) {
+              const firstLine = text.split('\n')[0].trim();
+              if (firstLine.length > 10 && firstLine.length < 150 && !firstLine.includes('TITLE')) {
+                title = firstLine;
+              }
+            }
+
+            // Strategy 4: Extract from h1 in content
+            if (!title) {
+              const h1Match = text.match(/<h1[^>]*>(.+?)<\/h1>/s);
+              if (h1Match) title = h1Match[1].replace(/<[^>]*>/g, '').trim();
+            }
+
+            // Fallback
+            if (!title || title === "Untitled" || title.length < 5) {
+              title = focus + " Guide for " + year;
+            }
+
+            // Parse other fields
+            const catMatch = text.match(/CATEGORY:\s*([^\n]+)/);
             if (catMatch) blogCategory = catMatch[1].trim();
 
-            const sumMatch = text.match(/SUMMARY:\s*(.+?)(?=\nTAGS:)/s);
+            const sumMatch = text.match(/SUMMARY:\s*(.+?)(?=\nTAGS:)/s) || text.match(/SUMMARY:\s*([^\n]+)/);
             if (sumMatch) summary = sumMatch[1].trim();
 
-            const tagsMatch = text.match(/TAGS:\s*(.+?)(?=\nKEYWORDS:)/s);
+            const tagsMatch = text.match(/TAGS:\s*([^\n]+)/);
             if (tagsMatch) tags = tagsMatch[1].trim();
 
-            const kwMatch = text.match(/KEYWORDS:\s*(.+?)(?=\nIMAGE_PROMPT:)/s);
+            const kwMatch = text.match(/KEYWORDS:\s*([^\n]+)/);
             if (kwMatch) keywords = kwMatch[1].trim();
 
-            const imgMatch = text.match(/IMAGE_PROMPT:\s*(.+?)(?=\nCONTENT:)/s);
+            const imgMatch = text.match(/IMAGE_PROMPT:\s*([^\n]+)/);
             if (imgMatch) imagePrompt = imgMatch[1].trim();
 
             const contentMatch = text.match(/CONTENT:\s*([\s\S]+)/);
             if (contentMatch) content = contentMatch[1].trim();
 
+            console.log("📝 Final title: " + title);
+            console.log("📊 Title length: " + title.length);
+
+            // Generate image
             const imageUrl = "https://image.pollinations.ai/prompt/" + encodeURIComponent(imagePrompt.substring(0, 50)) + "?width=1200&height=630&nologo=true";
 
+            // Build body
             const body = "![Blog Thumbnail](" + imageUrl + ")\n\n" +
               "# " + title + "\n\n" +
               "**Published by Novoxed Tech LLP** | " + month + " " + year + "\n\n" +
@@ -290,10 +245,9 @@ jobs:
               content + "\n\n" +
               "---\n\n" +
               "## Key Takeaways\n\n" +
-              "- Stay updated with latest frameworks and tools\n" +
-              "- Focus on full-stack capabilities\n" +
+              "- Stay updated with latest frameworks\n" +
               "- Build real-world projects\n" +
-              "- Consider certifications from leading institutes\n" +
+              "- Consider certifications\n" +
               "- Network with Kerala tech community\n\n" +
               "---\n\n" +
               "🏷️ **Tags:** " + tags + "\n" +
@@ -310,4 +264,6 @@ jobs:
               labels: ["blog", "ai-generated", String(year), topic.toLowerCase()]
             });
 
-            console.log("✅ Created: " + title);
+            console.log("✅ SUCCESS: " + title);
+            console.log("🤖 Model: " + usedModel);
+            console.log("📊 Word target: 1575+");
