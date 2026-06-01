@@ -22,10 +22,10 @@ jobs:
           curl -s --max-time 15 https://novoxedtechllp.com/about > /tmp/about.html 2>/dev/null || echo "Failed"
           curl -s --max-time 15 https://novoxedtechllp.com > /tmp/home.html 2>/dev/null || echo "Failed"
           
-          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/courses.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > /tmp/extracted.txt
+          grep -oi '<h[1-6][^>]*>[^<<]*' /tmp/courses.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > /tmp/extracted.txt
           grep -oi 'title="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/title="//;s/"$//' >> /tmp/extracted.txt
           grep -oi 'alt="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/alt="//;s/"$//' >> /tmp/extracted.txt
-          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/home.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' >> /tmp/extracted.txt
+          grep -oi '<h[1-6][^>]*>[^<<]*' /tmp/home.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' >> /tmp/extracted.txt
           
           cat /tmp/extracted.txt | grep -vi "^courses$\|^home$\|^about$\|^contact$\|^blog$\|^novox$\|^edtech$" | sort -u | grep -v "^$" | head -20 > /tmp/courses_clean.txt
           
@@ -96,26 +96,29 @@ jobs:
             const year = new Date().getFullYear();
             const month = new Date().toLocaleString('en-US', { month: 'long' });
             
-            const prompt = "Write a focused blog post about " + keyword + " for Novox Edtech LLP (IT training in Calicut, Kerala).\n\n" +
-              "STRICT: 700-800 words, 4-5 sections, specific to " + keyword + " only.\n\n" +
-              "STRUCTURE:\n" +
-              "1. TITLE: [Specific to " + keyword + "]\n" +
-              "2. INTRO: Why " + keyword + " matters in Kerala\n" +
-              "3. SECTIONS:\n" +
-              "   - Current trends in " + keyword + "\n" +
-              "   - Tools/skills for " + keyword + "\n" +
-              "   - Career scope in " + keyword + "\n" +
-              "   - 1 Pro Tip for " + keyword + "\n" +
-              "   - 1 Mistake in " + keyword + "\n" +
-              "4. SALARY TABLE: Kerala " + keyword + " salaries\n" +
-              "5. CONCLUSION: Novox " + keyword + " course\n\n" +
-              "SEO: 'best software training institute in Calicut' 2x, 'IT training in Kozhikode' 1x\n" +
-              "FORMAT: HTML (h2, p, ul, table, blockquote). NO markdown.\n\n" +
-              "OUTPUT:\n" +
-              "TITLE: [Title]\n" +
-              "SUMMARY: [1 sentence]\n" +
+            const prompt = "You are a senior content strategist for Novox Edtech LLP, an IT training institute in Calicut, Kerala.\n\n" +
+              "Write a clean, professional blog post (700-800 words) about " + keyword + ".\n\n" +
+              "STRICT RULES:\n" +
+              "- 700-800 words maximum\n" +
+              "- 4-5 short sections with h2 headings\n" +
+              "- NO tables of any kind (no salary tables, no comparison tables)\n" +
+              "- NO horizontal rules (---)\n" +
+              "- NO markdown symbols (#, **, ```, ---, >)\n" +
+              "- NO broken formatting like **Career Growth** | June 2026\n" +
+              "- Clean HTML only: h2, h3, p, ul, li, strong, blockquote\n" +
+              "- Each section: 150-180 words\n" +
+              "- Include 1 Pro Tip in blockquote\n" +
+              "- Include 1 Common Mistake warning\n" +
+              "- Write specifically about " + keyword + ", NOT generic technology\n\n" +
+              "SEO:\n" +
+              "- 'best software training institute in Calicut' exactly 2 times\n" +
+              "- 'IT training in Kozhikode' exactly 1 time\n" +
+              "- Natural integration, not forced\n\n" +
+              "OUTPUT FORMAT:\n" +
+              "TITLE: [Specific Title About " + keyword + "]\n" +
+              "SUMMARY: [2 sentences about " + keyword + "]\n" +
               "CONTENT:\n" +
-              "[HTML]";
+              "[Clean HTML content only]";
 
             console.log("🌐 Groq API | Topic: " + keyword);
             
@@ -130,7 +133,7 @@ jobs:
                 body: JSON.stringify({
                   model: "llama-3.3-70b-versatile",
                   messages: [
-                    { role: "system", content: "You are an expert " + keyword + " specialist. Write only about " + keyword + ", not generic tech." },
+                    { role: "system", content: "You are a clean, professional blogger. Write concise content without tables, rules, or markdown. Use only HTML tags." },
                     { role: "user", content: prompt }
                   ],
                   temperature: 0.7,
@@ -156,8 +159,8 @@ jobs:
             }
             
             if (!title) {
-              const h2Match = text.match(/<h2[^>]*>(.+?)<\/h2>/s);
-              if (h2Match) title = h2Match[1].replace(/<[^>]*>/g, '').trim();
+              const h2Match = text.match(/<<h2[^>]*>(.+?)<<\/h2>/s);
+              if (h2Match) title = h2Match[1].replace(/<<[^>]*>/g, '').trim();
             }
             
             if (!title) {
@@ -181,26 +184,40 @@ jobs:
             const contentMatch = text.match(/CONTENT:\s*([\s\S]+)/);
             if (contentMatch) content = contentMatch[1].trim();
 
+            // CLEAN CONTENT — Remove junk
+            content = content
+              .replace(/---+/g, '')           // Remove horizontal rules
+              .replace(/^\s*>\s*/gm, '')      // Remove blockquote markers
+              .replace(/\*\*/g, '')            // Remove bold markdown
+              .replace(/`/g, '')               // Remove backticks
+              .replace(/#{1,6}\s/g, '')       // Remove heading markdown
+              .replace(/<<table[\s\S]*?<\/table>/gi, '')  // Remove any tables
+              .replace(/<<tr[\s\S]*?<\/tr>/gi, '')      // Remove table rows
+              .replace(/<<td[\s\S]*?<\/td>/gi, '')      // Remove table cells
+              .replace(/<<th[\s\S]*?<\/th>/gi, '')      // Remove table headers
+              .replace(/\n{3,}/g, '\n\n')    // Remove excessive newlines
+              .trim();
+
             console.log("📝 Title: " + title);
+            console.log("🧹 Cleaned content");
 
-            // Generate POSTER image
-            const posterPrompt = "Professional blog poster thumbnail, " + imagePrompt + ", bold text space at top, educational theme, modern flat design, vibrant gradient background, 16:9 aspect ratio, high quality";
-            const imageUrl = "https://image.pollinations.ai/prompt/" + encodeURIComponent(posterPrompt.substring(0, 150)) + "?width=1200&height=630&nologo=true";
+            // HIGH QUALITY IMAGE — Use Pollinations with enhancement
+            const enhancedPrompt = "Ultra high quality professional blog thumbnail, " + imagePrompt + ", cinematic lighting, sharp focus, vibrant colors, modern corporate style, clean composition, 8k resolution, premium stock photo quality, educational technology theme";
+            const encodedPrompt = encodeURIComponent(enhancedPrompt.substring(0, 200));
+            const imageUrl = "https://image.pollinations.ai/prompt/" + encodedPrompt + "?width=1200&height=630&nologo=true&seed=" + Date.now() + "&enhance=true";
 
-            // Build body
+            // Build clean body
             const body = "![Blog Poster](" + imageUrl + ")\n\n" +
               "# " + title + "\n\n" +
-              "**" + category + "** | " + month + " " + year + "\n\n" +
-              "> " + summary + "\n\n" +
-              "---\n\n" +
+              "<p><strong>" + category + "</strong> | " + month + " " + year + "</p>\n\n" +
+              "<blockquote>" + summary + "</blockquote>\n\n" +
               content + "\n\n" +
-              "---\n\n" +
-              "🏷️ " + keyword + " | " + category + "\n" +
-              "🤖 Novox AI | 📅 " + new Date().toLocaleDateString() + "\n\n" +
-              "**Learn " + keyword + " at best software training institute in Calicut**\n\n" +
-              "📍 Novox Edtech LLP, Calicut | 🌐 [novoxedtechllp.com](https://novoxedtechllp.com)";
+              "<p>🏷️ " + keyword + " | " + category + "</p>\n" +
+              "<p>🤖 Novox AI | 📅 " + new Date().toLocaleDateString() + "</p>\n\n" +
+              "<p><strong>Learn " + keyword + " at best software training institute in Calicut</strong></p>\n\n" +
+              "<p>📍 Novox Edtech LLP, Calicut | 🌐 <a href='https://novoxedtechllp.com'>novoxedtechllp.com</a></p>";
 
-            // Create issue with CORRECT LABEL
+            // Create issue
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
