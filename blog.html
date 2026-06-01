@@ -3,411 +3,408 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Novox Blogs | Latest Tech Insights 2026</title>
+    <title>Novox Edtech | Blog</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* Typography */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 18px;
+            line-height: 1.8;
             color: #333;
-            line-height: 1.6;
+            background: #fafafa;
         }
-
+        
+        /* Container */
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 0 20px;
         }
-
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        /* Header */
+        .site-header {
+            background: #1a1a2e;
             color: white;
-            padding: 60px 20px;
+            padding: 40px 0;
             text-align: center;
+            border-bottom: 4px solid #e94560;
         }
-
-        header h1 {
+        
+        .site-header h1 {
+            font-family: 'Arial', sans-serif;
+            font-size: 2.2em;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .site-header p {
+            font-family: 'Arial', sans-serif;
+            font-size: 0.95em;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+        
+        /* Blog List */
+        .blog-list {
+            padding: 60px 0;
+        }
+        
+        .blog-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 40px;
+            padding: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            cursor: pointer;
+        }
+        
+        .blog-item:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .blog-meta {
+            font-family: 'Arial', sans-serif;
+            font-size: 0.85em;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+        
+        .blog-item h2 {
+            font-family: 'Arial', sans-serif;
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 15px;
+            line-height: 1.3;
+        }
+        
+        .blog-excerpt {
+            color: #555;
+            margin-bottom: 20px;
+        }
+        
+        .blog-footer {
+            font-family: 'Arial', sans-serif;
+            font-size: 0.85em;
+            color: #888;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+            margin-top: 20px;
+        }
+        
+        .read-more {
+            color: #e94560;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        /* Full Article View (hidden by default) */
+        .article-view {
+            display: none;
+            background: white;
+            padding: 60px 0;
+            min-height: 100vh;
+        }
+        
+        .article-view.active {
+            display: block;
+        }
+        
+        .article-header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding-bottom: 40px;
+            border-bottom: 2px solid #1a1a2e;
+        }
+        
+        .article-header h1 {
+            font-family: 'Arial', sans-serif;
             font-size: 2.5em;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+        
+        .article-meta {
+            font-family: 'Arial', sans-serif;
+            font-size: 0.9em;
+            color: #888;
+        }
+        
+        .article-content {
+            font-size: 1.05em;
+        }
+        
+        .article-content h2 {
+            font-family: 'Arial', sans-serif;
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e94560;
+        }
+        
+        .article-content h3 {
+            font-family: 'Arial', sans-serif;
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin: 30px 0 15px;
+        }
+        
+        .article-content p {
+            margin-bottom: 20px;
+        }
+        
+        .article-content blockquote {
+            border-left: 4px solid #e94560;
+            padding: 20px 30px;
+            margin: 30px 0;
+            background: #f8f9fa;
+            font-style: italic;
+            color: #555;
+        }
+        
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            font-size: 0.95em;
+        }
+        
+        .article-content th {
+            background: #1a1a2e;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-family: 'Arial', sans-serif;
+            font-weight: 600;
+        }
+        
+        .article-content td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .article-content tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .article-content ul, .article-content ol {
+            margin: 20px 0 20px 30px;
+        }
+        
+        .article-content li {
             margin-bottom: 10px;
         }
-
-        header p {
-            font-size: 1.2em;
-            opacity: 0.9;
+        
+        .article-content strong {
+            color: #1a1a2e;
         }
-
+        
+        .article-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: cover;
+            margin: 30px 0;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 40px;
+            color: #e94560;
+            text-decoration: none;
+            font-family: 'Arial', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .article-meta-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-family: 'Arial', sans-serif;
+            font-size: 0.9em;
+            color: #888;
+        }
+        
+        /* Loading */
         .loading {
             text-align: center;
-            padding: 60px 20px;
-            color: #666;
+            padding: 80px 20px;
+            color: #888;
         }
-
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #667eea;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
+        
+        /* Error */
         .error {
             text-align: center;
             padding: 40px;
-            color: #e74c3c;
+            color: #e94560;
             background: #fdf2f2;
-            border-radius: 8px;
-            margin: 20px 0;
+            border: 1px solid #fcc;
         }
-
-        .blog-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 30px;
-            padding: 40px 0;
-        }
-
-        .blog-card {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            cursor: pointer;
-        }
-
-        .blog-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-        }
-
-        .blog-card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        /* Footer */
+        .site-footer {
+            background: #1a1a2e;
             color: white;
-            padding: 20px;
-            min-height: 120px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-        }
-
-        .blog-category {
-            font-size: 0.75em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.9;
-            margin-bottom: 8px;
-        }
-
-        .blog-card-header h2 {
-            font-size: 1.3em;
-            line-height: 1.3;
-        }
-
-        .blog-card-body {
-            padding: 20px;
-        }
-
-        .blog-summary {
-            color: #666;
-            font-size: 0.95em;
-            line-height: 1.6;
-            margin-bottom: 15px;
-        }
-
-        .blog-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-            font-size: 0.85em;
-            color: #999;
-        }
-
-        .blog-tags {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        .tag {
-            background: #f0f0f0;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            color: #666;
-        }
-
-        .read-more {
-            display: inline-block;
-            margin-top: 15px;
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .read-more:hover {
-            text-decoration: underline;
-        }
-
-        /* Full blog view modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .modal-content {
-            background: white;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 40px;
-            border-radius: 12px;
-            position: relative;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 2em;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .modal-close:hover {
-            color: #333;
-        }
-
-        .modal-body h2 {
-            color: #667eea;
-            margin: 30px 0 15px;
-        }
-
-        .modal-body p {
-            margin-bottom: 15px;
-        }
-
-        .modal-body ul, .modal-body ol {
-            margin-left: 20px;
-            margin-bottom: 15px;
-        }
-
-        .modal-body blockquote {
-            border-left: 4px solid #667eea;
-            padding-left: 20px;
-            margin: 20px 0;
-            color: #555;
-            font-style: italic;
-        }
-
-        .modal-body table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-
-        .modal-body th, .modal-body td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .modal-body th {
-            background: #f5f5f5;
-            font-weight: 600;
-        }
-
-        footer {
             text-align: center;
-            padding: 40px;
-            color: #999;
-            border-top: 1px solid #eee;
+            padding: 40px 0;
+            font-family: 'Arial', sans-serif;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
 
-    <header>
+    <!-- Header -->
+    <header class="site-header">
         <div class="container">
-            <h1>Novox Edtech Blog</h1>
-            <p>Latest Insights on Tech Trends, Career Guidance & Industry Updates</p>
+            <h1>Novox Edtech</h1>
+            <p>Professional IT Training Institute | Calicut, Kerala</p>
         </div>
     </header>
 
-    <div class="container">
-        <div id="blog-list" class="loading">Loading blogs from GitHub</div>
-    </div>
-
-    <!-- Modal for full blog view -->
-    <div id="blog-modal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeModal()">&times;</span>
-            <div id="modal-body" class="modal-body"></div>
+    <!-- Blog List View -->
+    <main id="list-view" class="blog-list">
+        <div class="container">
+            <div id="blogs-container" class="loading">Loading articles...</div>
         </div>
-    </div>
+    </main>
 
-    <footer>
-        <p> Powered by Novox AI | Generated with Gemini 2.5 Flash</p>
+    <!-- Full Article View (hidden by default) -->
+    <main id="article-view" class="article-view">
+        <div class="container">
+            <div id="article-container"></div>
+            <span class="back-link" onclick="showList()">← Back to All Articles</span>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container">
+            <p> 2026 Novox Edtech LLP. All rights reserved.</p>
+            <p>Best Software Training Institute in Calicut</p>
+        </div>
     </footer>
 
     <script>
-        // CONFIGURATION - Change this to your repo
-        const GITHUB_USER = 'Angelin-ak';  // <-- CHANGE THIS
-        const GITHUB_REPO = 'novox-test-blog';        // <-- CHANGE THIS (or your real repo)
-        
-        const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/issues?state=open`;
+        const GITHUB_USER = 'Angelin-ak';
+        const GITHUB_REPO = 'novox-test-blog';
+        const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/issues?state=open&labels=blog`;
 
-        // Fetch blogs from GitHub Issues
-        async function fetchBlogs() {
-            const container = document.getElementById('blog-list');
+        let allIssues = [];
+
+        // Load blog list
+        async function loadBlogs() {
+            const container = document.getElementById('blogs-container');
             
             try {
                 const response = await fetch(API_URL);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const issues = await response.json();
+                allIssues = issues;
                 
                 if (issues.length === 0) {
-                    container.innerHTML = '<div class="error">No blogs found. Run the workflow first!</div>';
+                    container.innerHTML = '<div class="error">No articles published yet.</div>';
                     return;
                 }
 
-                // Sort by newest first
                 issues.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-                // Render blog cards
-                container.className = 'blog-grid';
+                container.className = 'blog-list';
                 container.innerHTML = issues.map(issue => {
-                    const parsed = parseIssueBody(issue.body);
+                    const body = issue.body || '';
+                    const summaryMatch = body.match(/>\s*(.+?)(?=\n\n)/s);
+                    const summary = summaryMatch ? summaryMatch[1] : 'Click to read full article...';
+                    const catMatch = body.match(/\*\*Category:\*\*\s*(.+?)\s*\|/);
+                    const category = catMatch ? catMatch[1].trim() : 'Technology';
+                    const date = new Date(issue.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                    });
                     
                     return `
-                        <div class="blog-card" onclick="openBlog(${issue.number})">
-                            <div class="blog-card-header">
-                                <span class="blog-category">${parsed.category || 'Tech Insights'}</span>
-                                <h2>${issue.title}</h2>
+                        <article class="blog-item" onclick="showArticle(${issue.number})">
+                            <div class="blog-meta">${category} | ${date}</div>
+                            <h2>${issue.title}</h2>
+                            <p class="blog-excerpt">${summary}</p>
+                            <div class="blog-footer">
+                                <span>Issue #${issue.number}</span>
+                                <span class="read-more">Read Full Article →</span>
                             </div>
-                            <div class="blog-card-body">
-                                <p class="blog-summary">${parsed.summary.substring(0, 150)}...</p>
-                                <div class="blog-tags">
-                                    ${parsed.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-                                </div>
-                                <div class="blog-meta">
-                                    <span>${new Date(issue.created_at).toLocaleDateString()}</span>
-                                    <span>${parsed.wordCount || ''} words</span>
-                                </div>
-                            </div>
-                        </div>
+                        </article>
                     `;
                 }).join('');
 
-                // Store issues for modal view
-                window.blogIssues = issues;
-
             } catch (error) {
-                container.innerHTML = `<div class="error">Error loading blogs: ${error.message}</div>`;
-                console.error('Fetch error:', error);
+                container.innerHTML = `<div class="error">Failed to load articles: ${error.message}</div>`;
             }
         }
 
-        // Parse issue body into sections
-        function parseIssueBody(body) {
-            if (!body) return { summary: '', content: '', tags: [], keywords: [], category: 'Tech' };
-            
-            const parts = body.split('---');
-            
-            // Extract summary from first part
-            const summaryMatch = parts[0].match(/SUMMARY:\s*(.+)/s);
-            const summary = summaryMatch ? summaryMatch[1].trim() : parts[0].substring(0, 200);
-            
-            // Extract content from middle part
-            const content = parts[1] || '';
-            
-            // Extract metadata from last part
-            const metaPart = parts[2] || '';
-            const tagsMatch = metaPart.match(/🏷️ Tags:\s*(.+)/);
-            const keywordsMatch = metaPart.match(/🔑 Keywords:\s*(.+)/);
-            
-            const tags = tagsMatch ? tagsMatch[1].split(',').map(t => t.trim()) : ['Tech 2026'];
-            const keywords = keywordsMatch ? keywordsMatch[1].split(',').map(k => k.trim()) : [];
-            
-            // Estimate word count
-            const wordCount = content.split(/\s+/).length;
-            
-            // Determine category from labels or content
-            const category = body.includes('agency') ? 'Agency' : 
-                           body.includes('education') ? 'Education' : 'Tech Insights';
-            
-            return { summary, content, tags, keywords, category, wordCount };
-        }
-
-        // Open full blog in modal
-        function openBlog(issueNumber) {
-            const issue = window.blogIssues.find(i => i.number === issueNumber);
+        // Show full article
+        function showArticle(issueNumber) {
+            const issue = allIssues.find(i => i.number === issueNumber);
             if (!issue) return;
+
+            const body = issue.body || '';
             
-            const parsed = parseIssueBody(issue.body);
-            const modal = document.getElementById('blog-modal');
-            const modalBody = document.getElementById('modal-body');
+            // Extract image
+            const imgMatch = body.match(/!\[Blog Thumbnail\]\((.+?)\)/);
+            const imageUrl = imgMatch ? imgMatch[1] : '';
             
-            modalBody.innerHTML = `
-                <h1>${issue.title}</h1>
-                <time style="color: #999;">${new Date(issue.created_at).toLocaleDateString()}</time>
-                <div style="margin-top: 30px;">
-                    ${parsed.content}
+            // Extract content (remove image and meta)
+            let content = body.replace(/!\[Blog Thumbnail\]\(.+?\)\n\n/, '');
+            content = content.replace(/---\n\n## 🏷️ Tags[\s\S]*$/, '');
+            
+            // Extract meta
+            const metaMatch = body.match(/## 🏷️ Tags[\s\S]*$/);
+            const meta = metaMatch ? metaMatch[0] : '';
+            
+            // Extract category and date
+            const catMatch = body.match(/\*\*Category:\*\*\s*(.+?)\s*\|/);
+            const category = catMatch ? catMatch[1].trim() : 'Technology';
+            const date = new Date(issue.created_at).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            document.getElementById('article-container').innerHTML = `
+                <div class="article-header">
+                    <div class="article-meta">${category} | ${date} | Issue #${issue.number}</div>
+                    <h1>${issue.title}</h1>
                 </div>
-                <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
-                    <p><strong>Tags:</strong> ${parsed.tags.join(', ')}</p>
-                    <p><strong>Keywords:</strong> ${parsed.keywords.join(', ')}</p>
+                ${imageUrl ? `<img class="article-image" src="${imageUrl}" alt="${issue.title}">` : ''}
+                <div class="article-content">
+                    ${content}
+                </div>
+                <div class="article-meta-footer">
+                    ${meta}
                 </div>
             `;
-            
-            modal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
+
+            // Hide list, show article
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('article-view').classList.add('active');
+            window.scrollTo(0, 0);
         }
 
-        // Close modal
-        function closeModal() {
-            document.getElementById('blog-modal').style.display = 'none';
-            document.body.style.overflow = 'auto';
+        // Show list view
+        function showList() {
+            document.getElementById('article-view').classList.remove('active');
+            document.getElementById('list-view').style.display = 'block';
+            window.scrollTo(0, 0);
         }
 
-        // Close modal on outside click
-        document.getElementById('blog-modal').addEventListener('click', function(e) {
-            if (e.target === this) closeModal();
-        });
-
-        // Close modal on Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeModal();
-        });
-
-        // Load blogs when page loads
-        fetchBlogs();
+        // Load on page load
+        loadBlogs();
     </script>
 
 </body>
