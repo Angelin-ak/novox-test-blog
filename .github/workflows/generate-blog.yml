@@ -10,11 +10,65 @@ jobs:
       issues: write
     
     steps:
+      - name: Determine Topic
+        id: topic
+        run: |
+          # Rotate topics based on day of week
+          DAY=$(date +%u)
+          if [ "$DAY" -eq 1 ] || [ "$DAY" -eq 4 ]; then
+            echo "topic=TECH" >> $GITHUB_OUTPUT
+            echo "category=Tech & Programming" >> $GITHUB_OUTPUT
+            echo "focus=Latest technology trends, programming frameworks, AI tools, cloud computing" >> $GITHUB_OUTPUT
+          elif [ "$DAY" -eq 2 ] || [ "$DAY" -eq 5 ]; then
+            echo "topic=EDUCATION" >> $GITHUB_OUTPUT
+            echo "category=Education & Learning" >> $GITHUB_OUTPUT
+            echo "focus=IT courses, learning paths, skill development, training methodologies" >> $GITHUB_OUTPUT
+          else
+            echo "topic=CAREER" >> $GITHUB_OUTPUT
+            echo "category=Career & Placement" >> $GITHUB_OUTPUT
+            echo "focus=Job market trends, salary insights, hiring criteria, career growth" >> $GITHUB_OUTPUT
+          fi
+
       - name: Generate Blog
         uses: actions/github-script@v7
         with:
           script: |
-            const prompt = "You are a senior tech advisor for Novox Edtech LLP in Calicut, Kerala. Write a comprehensive 2500+ word blog post about latest 2026 tech trends. Include salary data, hiring statistics, and tool recommendations.\n\nReturn ONLY this format:\n\nTITLE: [Your Title]\nCATEGORY: [Technology Trends / Career Guidance / Web Development]\nSUMMARY: [2-sentence summary]\nTAGS: [tag1, tag2, tag3]\nKEYWORDS: [keyword1, keyword2, keyword3]\n\nCONTENT:\n[Full HTML content using h2, h3, p, ul, li, strong, table, blockquote tags]";
+            const topic = "${{ steps.topic.outputs.topic }}";
+            const category = "${{ steps.topic.outputs.category }}";
+            const focus = "${{ steps.topic.outputs.focus }}";
+            
+            const prompt = "You are a senior content strategist for Novox Edtech LLP, a premier IT training institute in Calicut, Kerala. Write a comprehensive, authoritative blog post (2500+ words) about " + focus + " in 2026.\n\n" +
+              "STRUCTURE REQUIREMENTS:\n" +
+              "1. HEADLINE: Compelling, specific title with year 2026\n" +
+              "2. INTRODUCTION (2-3 paragraphs): Hook with real statistic or bold statement about Kerala/India tech scene\n" +
+              "3. MAIN CONTENT (6-8 sections, 300-400 words each):\n" +
+              "   - Use clear h2 headings for each section\n" +
+              "   - Include specific data: salary figures, hiring numbers, market growth\n" +
+              "   - Include comparison tables using HTML table tags\n" +
+              "   - Include 2-3 Pro Tips in blockquote format\n" +
+              "   - Include 1 Common Mistake warning\n" +
+              "4. SALARY BENCHMARK TABLE: 2026 Kerala IT salary data in HTML table\n" +
+              "5. KEY TAKEAWAYS: 5-7 actionable bullet points\n" +
+              "6. CONCLUSION: Summary + call to action for Novox courses\n" +
+              "7. ABOUT: Brief mention of Novox Edtech as best software training institute in Calicut\n\n" +
+              "SEO REQUIREMENTS:\n" +
+              "- Naturally include 'best software training institute in Calicut' 2 times\n" +
+              "- Naturally include 'IT training in Kozhikode' 1 time\n" +
+              "- Include target keywords in first 100 words\n\n" +
+              "FORMATTING:\n" +
+              "- Use clean HTML: h2, h3, p, ul, li, strong, table, tr, th, td, blockquote\n" +
+              "- NO markdown symbols (#, **, ```)\n" +
+              "- NO generic fluff like 'In today's fast-paced world'\n" +
+              "- Every paragraph must contain specific data or actionable advice\n\n" +
+              "OUTPUT FORMAT:\n" +
+              "TITLE: [Your Title]\n" +
+              "CATEGORY: " + category + "\n" +
+              "SUMMARY: [2-sentence compelling summary]\n" +
+              "TAGS: [tag1, tag2, tag3]\n" +
+              "KEYWORDS: [keyword1, keyword2, keyword3]\n" +
+              "IMAGE_PROMPT: [short description for AI thumbnail]\n\n" +
+              "CONTENT:\n" +
+              "[Full HTML content following structure above]";
 
             const response = await fetch(
               "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + process.env.GEMINI_API_KEY,
@@ -43,28 +97,54 @@ jobs:
             const summaryMatch = text.match(/SUMMARY:\s*(.+)/);
             const tagsMatch = text.match(/TAGS:\s*(.+)/);
             const keywordsMatch = text.match(/KEYWORDS:\s*(.+)/);
+            const imagePromptMatch = text.match(/IMAGE_PROMPT:\s*(.+)/);
             const contentMatch = text.match(/CONTENT:\s*([\s\S]+)/);
 
             const title = titleMatch ? titleMatch[1].trim() : "Untitled";
-            const category = categoryMatch ? categoryMatch[1].trim() : "Technology";
+            const blogCategory = categoryMatch ? categoryMatch[1].trim() : category;
             const summary = summaryMatch ? summaryMatch[1].trim() : "";
             const tags = tagsMatch ? tagsMatch[1].trim() : "Tech 2026";
             const keywords = keywordsMatch ? keywordsMatch[1].trim() : "Novox Edtech";
+            const imagePrompt = imagePromptMatch ? imagePromptMatch[1].trim() : "technology education 2026";
             const content = contentMatch ? contentMatch[1].trim() : text;
 
             // Generate image
-            const imagePrompt = encodeURIComponent(title.substring(0, 50));
-            const imageUrl = "https://image.pollinations.ai/prompt/" + imagePrompt + "?width=1200&height=630&nologo=true";
+            const encodedPrompt = encodeURIComponent(imagePrompt.substring(0, 50));
+            const imageUrl = "https://image.pollinations.ai/prompt/" + encodedPrompt + "?width=1200&height=630&nologo=true";
+
+            // Build structured body matching company format
+            const body = "![Blog Thumbnail](" + imageUrl + ")\n\n" +
+              "# " + title + "\n\n" +
+              "**Published by Novoxed Tech LLP** | " + new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + "\n\n" +
+              "> " + summary + "\n\n" +
+              "---\n\n" +
+              content + "\n\n" +
+              "---\n\n" +
+              "## Key Takeaways\n\n" +
+              "- Stay updated with latest frameworks and tools\n" +
+              "- Focus on full-stack capabilities for better opportunities\n" +
+              "- Build real-world projects to showcase skills\n" +
+              "- Consider certifications from leading training institutes\n" +
+              "- Network with industry professionals in Kerala tech community\n\n" +
+              "---\n\n" +
+              "🏷️ **Tags:** " + tags + "\n" +
+              "🔑 **Keywords:** " + keywords + "\n" +
+              "🤖 **Generated by Novox AI** | 📅 " + new Date().toISOString() + "\n\n" +
+              "**Ready to upskill?** Join the **best software training institute in Calicut** and transform your career with hands-on training in MERN Stack, Flutter, Python + React, and more.\n\n" +
+              "📍 **Novox Edtech LLP** | Calicut, Kerala\n" +
+              "🌐 [novoxedtechllp.com](https://novoxedtechllp.com)";
 
             // Create issue
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: title,
-              body: "![Blog Thumbnail](" + imageUrl + ")\n\n# " + title + "\n\n**Category:** " + category + " | **Date:** " + new Date().toLocaleDateString() + "\n\n> " + summary + "\n\n---\n\n" + content + "\n\n---\n\n🏷️ **Tags:** " + tags + "\n🔑 **Keywords:** " + keywords + "\n🤖 **Generated by Novox AI** | 📅 " + new Date().toISOString(),
-              labels: ["blog", "ai-generated", "2026"]
+              body: body,
+              labels: ["blog", "ai-generated", "2026", topic.toLowerCase()]
             });
 
-            console.log("Created: " + title);
+            console.log("✅ Created: " + title);
+            console.log("📂 Topic: " + topic);
+            console.log("🏷️ Category: " + blogCategory);
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
