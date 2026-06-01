@@ -5,17 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Novox Edtech | Blog</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f8f9fa;
             color: #333;
             line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
         /* Header */
@@ -131,6 +133,7 @@
             margin-bottom: 15px;
         }
 
+        /* Category colors */
         .blog-category {
             display: inline-block;
             padding: 6px 14px;
@@ -140,19 +143,29 @@
             text-transform: capitalize;
         }
 
-        .category-career {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .category-tech {
+        .cat-tech {
             background: #dbeafe;
             color: #1e40af;
         }
 
-        .category-education {
+        .cat-design {
             background: #fce7f3;
             color: #9d174d;
+        }
+
+        .cat-marketing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .cat-career {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .cat-education {
+            background: #e0e7ff;
+            color: #3730a3;
         }
 
         .blog-date {
@@ -161,11 +174,6 @@
             gap: 6px;
             color: #94a3b8;
             font-size: 0.85em;
-        }
-
-        .blog-date::before {
-            content: "📅";
-            font-size: 0.9em;
         }
 
         .blog-card h2 {
@@ -192,15 +200,6 @@
             display: flex;
             align-items: center;
             gap: 5px;
-        }
-
-        .read-btn::after {
-            content: "→";
-            transition: transform 0.2s;
-        }
-
-        .blog-card:hover .read-btn::after {
-            transform: translateX(5px);
         }
 
         /* Article View */
@@ -337,7 +336,6 @@
             background: #e2e8f0;
         }
 
-        /* Loading */
         .loading {
             text-align: center;
             padding: 100px 20px;
@@ -345,14 +343,20 @@
             font-size: 1.1em;
         }
 
-        /* Error */
         .error {
             text-align: center;
             padding: 60px 20px;
             color: #dc2626;
         }
 
-        /* Responsive */
+        .site-footer {
+            background: #1e293b;
+            color: white;
+            text-align: center;
+            padding: 40px 0;
+            font-size: 0.9em;
+        }
+
         @media (max-width: 1024px) {
             .blog-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -376,7 +380,6 @@
 </head>
 <body>
 
-    <!-- Header -->
     <header class="site-header">
         <div class="header-container">
             <a href="#" class="logo">
@@ -398,14 +401,12 @@
         </div>
     </header>
 
-    <!-- Blog List -->
     <main id="list-view" class="blog-section">
         <div class="blog-grid" id="blogs-container">
             <div class="loading">Loading articles...</div>
         </div>
     </main>
 
-    <!-- Article View -->
     <main id="article-view" class="article-view">
         <img id="article-hero" class="article-hero" src="" alt="">
         <div class="article-container">
@@ -414,6 +415,13 @@
         </div>
     </main>
 
+    <footer class="site-footer">
+        <div class="container">
+            <p> 2026 Novox Edtech LLP. All rights reserved.</p>
+            <p>Best Software Training Institute in Calicut</p>
+        </div>
+    </footer>
+
     <script>
         const GITHUB_USER = 'Angelin-ak';
         const GITHUB_REPO = 'novox-test-blog';
@@ -421,15 +429,28 @@
 
         let allIssues = [];
 
-        // Get category class
-        function getCategoryClass(category) {
-            const cat = category.toLowerCase();
-            if (cat.includes('career') || cat.includes('placement')) return 'category-career';
-            if (cat.includes('tech') || cat.includes('programming')) return 'category-tech';
-            return 'category-education';
+        // Get category class and display name from labels
+        function getCategoryInfo(labels) {
+            const labelNames = labels.map(l => l.name.toLowerCase());
+            
+            // Check labels for category
+            if (labelNames.includes('design')) {
+                return { class: 'cat-design', name: 'UI/UX Design' };
+            }
+            if (labelNames.includes('marketing')) {
+                return { class: 'cat-marketing', name: 'Digital Marketing' };
+            }
+            if (labelNames.includes('career')) {
+                return { class: 'cat-career', name: 'Career & Placement' };
+            }
+            if (labelNames.includes('education')) {
+                return { class: 'cat-education', name: 'Education' };
+            }
+            
+            // Default to tech
+            return { class: 'cat-tech', name: 'Technology' };
         }
 
-        // Format date
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', {
@@ -439,7 +460,6 @@
             });
         }
 
-        // Load blogs
         async function loadBlogs() {
             const container = document.getElementById('blogs-container');
             
@@ -451,7 +471,7 @@
                 allIssues = issues;
                 
                 if (issues.length === 0) {
-                    container.innerHTML = '<div class="error">No articles yet. Run the workflow!</div>';
+                    container.innerHTML = '<div class="error">No articles yet.</div>';
                     return;
                 }
 
@@ -461,18 +481,16 @@
                     const body = issue.body || '';
                     
                     // Extract image
-                    const imgMatch = body.match(/!\[Blog Thumbnail\]\((.+?)\)/);
+                    const imgMatch = body.match(/!\[Blog Poster\]\((.+?)\)/) || body.match(/!\[Blog Thumbnail\]\((.+?)\)/);
                     const imageUrl = imgMatch ? imgMatch[1] : 'https://via.placeholder.com/800x500/2563eb/ffffff?text=Novox+Blog';
                     
-                    // Extract summary
+                    // Extract summary from blockquote or first paragraph
                     const summaryMatch = body.match(/> (.+?)(?=\n\n)/);
                     const summary = summaryMatch ? summaryMatch[1] : 'Click to read more...';
                     
-                    // Extract category
-                    const catMatch = body.match(/\*\*Category:\*\*\s*(.+?)\s*\|/);
-                    const category = catMatch ? catMatch[1].trim() : 'Technology';
+                    // Get category from labels
+                    const catInfo = getCategoryInfo(issue.labels);
                     
-                    // Extract date
                     const date = formatDate(issue.created_at);
 
                     return `
@@ -480,12 +498,12 @@
                             <img class="blog-image" src="${imageUrl}" alt="${issue.title}" onerror="this.src='https://via.placeholder.com/800x500/2563eb/ffffff?text=Novox+Blog'">
                             <div class="blog-content">
                                 <div class="blog-meta-top">
-                                    <span class="blog-category ${getCategoryClass(category)}">${category}</span>
+                                    <span class="blog-category ${catInfo.class}">${catInfo.name}</span>
                                     <span class="blog-date">${date}</span>
                                 </div>
                                 <h2>${issue.title}</h2>
                                 <div class="blog-footer">
-                                    <span class="read-btn">Read</span>
+                                    <span class="read-btn">Read →</span>
                                 </div>
                             </div>
                         </article>
@@ -497,62 +515,43 @@
             }
         }
 
-        // Show article
         function showArticle(issueNumber) {
             const issue = allIssues.find(i => i.number === issueNumber);
             if (!issue) return;
 
             const body = issue.body || '';
             
-            // Extract image
-            const imgMatch = body.match(/!\[Blog Thumbnail\]\((.+?)\)/);
+            const imgMatch = body.match(/!\[Blog Poster\]\((.+?)\)/) || body.match(/!\[Blog Thumbnail\]\((.+?)\)/);
             const imageUrl = imgMatch ? imgMatch[1] : '';
             
-            // Extract content
-            let content = body.replace(/!\[Blog Thumbnail\]\(.+?\)\n\n/, '');
-            content = content.replace(/---\n\n🏷️[\s\S]*$/, '');
+            let content = body.replace(/!\[Blog Poster\]\(.+?\)\n\n/, '').replace(/!\[Blog Thumbnail\]\(.+?\)\n\n/, '');
             
-            // Extract meta
-            const metaMatch = body.match(/🏷️[\s\S]*$/);
-            const meta = metaMatch ? metaMatch[0] : '';
-            
-            // Extract category
-            const catMatch = body.match(/\*\*Category:\*\*\s*(.+?)\s*\|/);
-            const category = catMatch ? catMatch[1].trim() : 'Technology';
-            
+            const catInfo = getCategoryInfo(issue.labels);
             const date = formatDate(issue.created_at);
 
-            // Set hero image
             document.getElementById('article-hero').src = imageUrl;
             
-            // Build article HTML
             document.getElementById('article-content').innerHTML = `
                 <div class="article-header">
-                    <div class="article-author">Published by Novoxed Tech LLP | ${date}</div>
+                    <div class="article-author">${catInfo.name} | ${date}</div>
                     <h1 class="article-title">${issue.title}</h1>
                 </div>
                 <div class="article-content">
                     ${content}
                 </div>
-                <div style="margin-top: 40px; padding: 20px; background: #f8fafc; border-radius: 8px;">
-                    ${meta.replace(/\n/g, '<br>')}
-                </div>
             `;
 
-            // Switch views
             document.getElementById('list-view').style.display = 'none';
             document.getElementById('article-view').classList.add('active');
             window.scrollTo(0, 0);
         }
 
-        // Show list
         function showList() {
             document.getElementById('article-view').classList.remove('active');
             document.getElementById('list-view').style.display = 'block';
             window.scrollTo(0, 0);
         }
 
-        // Load on start
         loadBlogs();
     </script>
 
