@@ -1,3 +1,87 @@
+---
+name: AI Blog Generator
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * 1,3,5'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    
+    steps:
+      - name: Fetch Website Data
+        id: website
+        run: |
+          echo "🌐 Fetching website data..."
+          
+          curl -s --max-time 15 https://novoxedtechllp.com/courses > /tmp/courses.html 2>/dev/null || echo "Failed"
+          curl -s --max-time 15 https://novoxedtechllp.com/about > /tmp/about.html 2>/dev/null || echo "Failed"
+          curl -s --max-time 15 https://novoxedtechllp.com > /tmp/home.html 2>/dev/null || echo "Failed"
+          
+          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/courses.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > /tmp/extracted.txt
+          grep -oi 'title="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/title="//;s/"$//' >> /tmp/extracted.txt
+          grep -oi 'alt="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/alt="//;s/"$//' >> /tmp/extracted.txt
+          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/home.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' >> /tmp/extracted.txt
+          
+          cat /tmp/extracted.txt | grep -vi "^courses$\|^home$\|^about$\|^contact$\|^blog$\|^novox$\|^edtech$" | sort -u | grep -v "^$" | head -20 > /tmp/courses_clean.txt
+          
+          echo "📋 Topics found:"
+          cat /tmp/courses_clean.txt || echo "None"
+          
+          {
+            echo "=== WEBSITE TOPICS ==="
+            cat /tmp/courses_clean.txt
+          } > /tmp/website_data.txt
+          
+          echo "website_data<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/website_data.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Select Topic
+        id: topic
+        run: |
+          ALL_TOPICS=$(cat /tmp/courses_clean.txt | tr '[:upper:]' '[:lower:]')
+          
+          HAS_MERN=$(echo "$ALL_TOPICS" | grep -c "mern\|react\|node\|mongo" || echo "0")
+          HAS_FLUTTER=$(echo "$ALL_TOPICS" | grep -c "flutter\|dart\|mobile" || echo "0")
+          HAS_PYTHON=$(echo "$ALL_TOPICS" | grep -c "python\|django\|data" || echo "0")
+          HAS_UIUX=$(echo "$ALL_TOPICS" | grep -c "ui\|ux\|design\|figma" || echo "0")
+          HAS_MARKETING=$(echo "$ALL_TOPICS" | grep -c "digital\|marketing\|seo\|social" || echo "0")
+          
+          TOPIC_POOL=()
+          
+          [ "$HAS_MERN" -gt 0 ] && TOPIC_POOL+=("mern:TECH:MERN Stack:Professional developer coding MERN stack application with multiple monitors showing React Node.js MongoDB")
+          [ "$HAS_FLUTTER" -gt 0 ] && TOPIC_POOL+=("flutter:TECH:Flutter Development:Mobile app developer creating beautiful Flutter cross-platform app with Dart programming")
+          [ "$HAS_PYTHON" -gt 0 ] && TOPIC_POOL+=("python:TECH:Python Programming:Data scientist working with Python code analyzing charts and machine learning models")
+          [ "$HAS_UIUX" -gt 0 ] && TOPIC_POOL+=("uiux:DESIGN:UI/UX Design:Creative designer crafting mobile app interface in Figma with modern color palette and wireframes")
+          [ "$HAS_MARKETING" -gt 0 ] && TOPIC_POOL+=("seo:MARKETING:SEO Marketing:Digital marketing professional analyzing Google search rankings and website analytics dashboard")
+          [ "$HAS_MARKETING" -gt 0 ] && TOPIC_POOL+=("social:MARKETING:Social Media:Social media manager creating engaging Instagram and LinkedIn content strategy with growth charts")
+          
+          TOPIC_POOL+=("placement:CAREER:Career & Placement:Young professional successfully cracking tech job interview with confident smile in modern office")
+          TOPIC_POOL+=("career:CAREER:Career Growth:IT professional climbing career ladder with skills certificate and salary growth chart")
+          TOPIC_POOL+=("education:EDUCATION:IT Education:Students learning coding in modern classroom with laptops and instructor guidance")
+          
+          WEEK_OF_YEAR=$(date +%V)
+          DAY=$(date +%u)
+          INDEX=$(( (WEEK_OF_YEAR * 3 + DAY) % ${#TOPIC_POOL[@]} ))
+          
+          SELECTED="${TOPIC_POOL[$INDEX]}"
+          IFS=: read -r keyword topic category image_prompt <<< "$SELECTED"
+          
+          [ -z "$topic" ] && { keyword="education"; topic="EDUCATION"; category="Education & Learning"; image_prompt="Students learning technology in modern classroom with laptops"; }
+          
+          echo "✅ Topic: $keyword | $topic | $category"
+          echo "🖼️ Image: $image_prompt"
+          
+          echo "topic=$topic" >> $GITHUB_OUTPUT
+          echo "category=$category" >> $GITHUB_OUTPUT
+          echo "keyword=$keyword" >> $GITHUB_OUTPUT
+          echo "image_prompt=$image_prompt" >> $GITHUB_OUTPUT
+
       - name: Generate Blog with Groq
         uses: actions/github-script@v7
         env:
@@ -12,7 +96,6 @@
             const year = new Date().getFullYear();
             const month = new Date().toLocaleString('en-US', { month: 'long' });
             
-            // TOPIC-SPECIFIC PROMPT
             const prompt = "Write a focused blog post about " + keyword + " for Novox Edtech LLP (IT training in Calicut, Kerala).\n\n" +
               "STRICT: 700-800 words, 4-5 sections, specific to " + keyword + " only.\n\n" +
               "STRUCTURE:\n" +
@@ -34,6 +117,8 @@
               "CONTENT:\n" +
               "[HTML]";
 
+            console.log("🌐 Groq API | Topic: " + keyword);
+            
             const response = await fetch(
               "https://api.groq.com/openai/v1/chat/completions",
               {
@@ -58,11 +143,11 @@
             if (data.error) throw new Error(data.error.message);
 
             const text = data.choices[0].message.content;
+            console.log("📄 Length: " + text.length + " chars");
 
-            // PARSE TITLE — Multiple strategies
+            // PARSE TITLE
             let title = null;
             
-            // Strategy 1: TITLE: marker
             const titleMatch = text.match(/TITLE:\s*(.+?)(?=\nSUMMARY:)/s) || 
                               text.match(/TITLE:\s*(.+?)(?=\n\n)/) ||
                               text.match(/TITLE:\s*([^\n]+)/);
@@ -70,13 +155,11 @@
               title = titleMatch[1].trim();
             }
             
-            // Strategy 2: First h2 heading
             if (!title) {
               const h2Match = text.match(/<h2[^>]*>(.+?)<\/h2>/s);
               if (h2Match) title = h2Match[1].replace(/<[^>]*>/g, '').trim();
             }
             
-            // Strategy 3: First line if looks like title
             if (!title) {
               const firstLine = text.split('\n')[0].trim();
               if (firstLine.length > 10 && firstLine.length < 150 && !firstLine.includes('TITLE')) {
@@ -84,7 +167,6 @@
               }
             }
             
-            // Final fallback
             if (!title || title.length < 5) {
               title = "Master " + keyword.charAt(0).toUpperCase() + keyword.slice(1) + " in " + year;
             }
@@ -102,7 +184,7 @@
             console.log("📝 Title: " + title);
 
             // Generate POSTER image
-            const posterPrompt = "Professional blog poster, " + imagePrompt + ", bold text space at top, educational theme, modern flat design, vibrant gradient background, 16:9";
+            const posterPrompt = "Professional blog poster thumbnail, " + imagePrompt + ", bold text space at top, educational theme, modern flat design, vibrant gradient background, 16:9 aspect ratio, high quality";
             const imageUrl = "https://image.pollinations.ai/prompt/" + encodeURIComponent(posterPrompt.substring(0, 150)) + "?width=1200&height=630&nologo=true";
 
             // Build body
@@ -124,7 +206,7 @@
               repo: context.repo.repo,
               title: title,
               body: body,
-              labels: ["blog", "ai-generated", String(year), topic.toLowerCase()]  // topic = TECH, DESIGN, MARKETING, CAREER, EDUCATION
+              labels: ["blog", "ai-generated", String(year), topic.toLowerCase()]
             });
 
             console.log("✅ Created: " + title);
