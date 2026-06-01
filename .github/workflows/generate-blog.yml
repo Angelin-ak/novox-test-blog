@@ -12,47 +12,173 @@ jobs:
       issues: write
     
     steps:
-      - name: Determine Topic
+      - name: Get Current Year
+        id: date
+        run: |
+          echo "year=$(date +%Y)" >> $GITHUB_OUTPUT
+          echo "month=$(date +%B)" >> $GITHUB_OUTPUT
+
+      - name: Smart Topic Selection
         id: topic
         run: |
-          DAY=$(date +%u)
-          if [ "$DAY" -eq 1 ] || [ "$DAY" -eq 4 ]; then
-            echo "topic=TECH" >> $GITHUB_OUTPUT
-            echo "category=Tech & Programming" >> $GITHUB_OUTPUT
-            echo "focus=Latest technology trends, programming frameworks, AI tools, cloud computing" >> $GITHUB_OUTPUT
-          elif [ "$DAY" -eq 2 ] || [ "$DAY" -eq 5 ]; then
-            echo "topic=EDUCATION" >> $GITHUB_OUTPUT
-            echo "category=Education & Learning" >> $GITHUB_OUTPUT
-            echo "focus=IT courses, learning paths, skill development, training methodologies" >> $GITHUB_OUTPUT
-          else
-            echo "topic=CAREER" >> $GITHUB_OUTPUT
-            echo "category=Career & Placement" >> $GITHUB_OUTPUT
-            echo "focus=Job market trends, salary insights, hiring criteria, career growth" >> $GITHUB_OUTPUT
+          # ============================================
+          # TOPIC MAP — Update when courses change
+          # ============================================
+          declare -A TOPIC_MAP=(
+            ["mern"]="TECH:Tech & Programming:MERN Stack Development:Latest trends in MERN Stack, React, Node.js, and MongoDB for full-stack developers"
+            ["flutter"]="TECH:Tech & Programming:Flutter Development:Cross-platform mobile development with Flutter, Dart, and responsive design trends"
+            ["python"]="TECH:Tech & Programming:Python & Data Science:Python programming, data science, machine learning, and AI integration trends"
+            ["react"]="TECH:Tech & Programming:React & Frontend:Modern React development, Next.js, and frontend architecture trends"
+            ["node"]="TECH:Tech & Programming:Backend Development:Node.js, Express, and backend API development trends"
+            
+            ["ui"]="DESIGN:UI/UX Design:UI/UX Design:Latest UI/UX design trends, Figma, prototyping, and design systems"
+            ["ux"]="DESIGN:UI/UX Design:User Experience:User research, usability testing, and experience design trends"
+            ["figma"]="DESIGN:UI/UX Design:Design Tools:Figma, Adobe XD, and modern design workflow trends"
+            
+            ["digital"]="MARKETING:Digital Marketing:Digital Marketing:Digital marketing strategies, SEO, content marketing, and analytics trends"
+            ["seo"]="MARKETING:Digital Marketing:SEO & Content:Search engine optimization, content strategy, and organic growth trends"
+            ["social"]="MARKETING:Digital Marketing:Social Media:Social media marketing, influencer strategies, and community building"
+            
+            ["placement"]="CAREER:Career & Placement:Placement & Jobs:Job market trends, interview preparation, and placement strategies for Kerala tech graduates"
+            ["career"]="CAREER:Career & Placement:Career Growth:Career advancement, salary negotiation, and professional development for IT professionals"
+            ["interview"]="CAREER:Career & Placement:Interview Prep:Technical interview preparation, coding challenges, and soft skills for hiring"
+            
+            ["education"]="EDUCATION:Education & Learning:IT Education:IT education trends, learning methodologies, and skill development in Calicut"
+            ["learning"]="EDUCATION:Education & Learning:Learning Paths:Effective learning strategies, bootcamp vs degree, and self-paced learning trends"
+            ["course"]="EDUCATION:Education & Learning:Course Selection:How to choose the right IT course, certification value, and ROI on tech education"
+          )
+
+          # Try to detect from website
+          echo "🔍 Checking website..."
+          
+          for i in 1 2 3; do
+            if curl -s --max-time 10 https://novoxedtechllp.com > /tmp/site.html 2>/dev/null; then
+              echo "✅ Website fetched"
+              break
+            fi
+            sleep 2
+          done
+
+          SELECTED_TOPIC=""
+          TOPIC_COUNT=0
+          
+          if [ -f /tmp/site.html ]; then
+            for keyword in "${!TOPIC_MAP[@]}"; do
+              count=$(grep -oi "$keyword" /tmp/site.html | wc -l)
+              if [ "$count" -gt "$TOPIC_COUNT" ]; then
+                TOPIC_COUNT=$count
+                SELECTED_TOPIC=$keyword
+              fi
+            done
           fi
 
-      - name: Generate Blog with Auto-Model Selection
+          # Fallback to day-based rotation
+          if [ -z "$SELECTED_TOPIC" ] || [ "$TOPIC_COUNT" -lt 2 ]; then
+            echo "🔄 Using day-based rotation"
+            
+            DAY=$(date +%u)
+            WEEK_OF_MONTH=$(( ($(date +%d) - 1) / 7 + 1 ))
+            
+            case $DAY in
+              1)
+                case $WEEK_OF_MONTH in
+                  1) SELECTED_TOPIC="mern" ;;
+                  2) SELECTED_TOPIC="flutter" ;;
+                  3) SELECTED_TOPIC="python" ;;
+                  *) SELECTED_TOPIC="react" ;;
+                esac
+                ;;
+              2)
+                case $WEEK_OF_MONTH in
+                  1|3) SELECTED_TOPIC="ui" ;;
+                  *) SELECTED_TOPIC="ux" ;;
+                esac
+                ;;
+              3)
+                case $WEEK_OF_MONTH in
+                  1|3) SELECTED_TOPIC="digital" ;;
+                  *) SELECTED_TOPIC="seo" ;;
+                esac
+                ;;
+              4)
+                case $WEEK_OF_MONTH in
+                  1) SELECTED_TOPIC="node" ;;
+                  2) SELECTED_TOPIC="python" ;;
+                  3) SELECTED_TOPIC="mern" ;;
+                  *) SELECTED_TOPIC="flutter" ;;
+                esac
+                ;;
+              5)
+                case $WEEK_OF_MONTH in
+                  1|3) SELECTED_TOPIC="figma" ;;
+                  *) SELECTED_TOPIC="career" ;;
+                esac
+                ;;
+              6)
+                case $WEEK_OF_MONTH in
+                  1|3) SELECTED_TOPIC="placement" ;;
+                  *) SELECTED_TOPIC="interview" ;;
+                esac
+                ;;
+              *)
+                case $WEEK_OF_MONTH in
+                  1|3) SELECTED_TOPIC="education" ;;
+                  *) SELECTED_TOPIC="learning" ;;
+                esac
+                ;;
+            esac
+          else
+            echo "🎯 Detected from website: $SELECTED_TOPIC"
+          fi
+
+          IFS=: read -r topic category focus_desc <<< "${TOPIC_MAP[$SELECTED_TOPIC]}"
+          
+          if [ -z "$topic" ]; then
+            topic="TECH"
+            category="Tech & Programming"
+            focus_desc="Latest technology trends in software development"
+          fi
+
+          echo "topic=$topic" >> $GITHUB_OUTPUT
+          echo "category=$category" >> $GITHUB_OUTPUT
+          echo "focus=$focus_desc" >> $GITHUB_OUTPUT
+          echo "selected_keyword=$SELECTED_TOPIC" >> $GITHUB_OUTPUT
+
+      - name: Generate Blog
         uses: actions/github-script@v7
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CURRENT_YEAR: ${{ steps.date.outputs.year }}
+          CURRENT_MONTH: ${{ steps.date.outputs.month }}
         with:
           retries: 3
           script: |
+            const year = process.env.CURRENT_YEAR;
+            const month = process.env.CURRENT_MONTH;
             const topic = "${{ steps.topic.outputs.topic }}";
             const category = "${{ steps.topic.outputs.category }}";
             const focus = "${{ steps.topic.outputs.focus }}";
-            
-            const prompt = "You are a senior content strategist for Novox Edtech LLP, a premier IT training institute in Calicut, Kerala. Write a comprehensive, authoritative blog post (2500+ words) about " + focus + " in 2026.\n\n" +
+            const selectedKeyword = "${{ steps.topic.outputs.selected_keyword }}";
+
+            const prompt = "You are a senior content strategist for Novox Edtech LLP, a premier IT training institute in Calicut, Kerala. Write a comprehensive, authoritative blog post (2500+ words) about " + focus + ".\n\n" +
+              "TIME CONTEXT: This article is being written in " + month + " " + year + ". Reference current trends, latest data, and recent developments as of " + year + ".\n\n" +
+              "CONTEXT:\n" +
+              "- Novox Edtech specializes in: MERN Stack, Flutter, Python + React, UI/UX Design, Digital Marketing\n" +
+              "- Location: Calicut, Kerala\n" +
+              "- Target audience: Aspiring developers, career switchers, and professionals aged 20-30 in Kerala\n" +
+              "- Current focus area: " + focus + "\n" +
+              "- Selected topic: " + selectedKeyword + "\n\n" +
               "STRUCTURE REQUIREMENTS:\n" +
-              "1. HEADLINE: Compelling, specific title with year 2026\n" +
-              "2. INTRODUCTION (2-3 paragraphs): Hook with real statistic or bold statement about Kerala/India tech scene\n" +
+              "1. HEADLINE: Compelling, specific title referencing " + year + " or current trends\n" +
+              "2. INTRODUCTION (2-3 paragraphs): Hook with real statistic about Kerala/India tech scene as of " + year + "\n" +
               "3. MAIN CONTENT (6-8 sections, 300-400 words each):\n" +
               "   - Use clear h2 headings for each section\n" +
-              "   - Include specific data: salary figures, hiring numbers, market growth\n" +
+              "   - Include specific data: salary figures, hiring numbers, market growth (use " + year + " data or most recent available)\n" +
               "   - Include comparison tables using HTML table tags\n" +
               "   - Include 2-3 Pro Tips in blockquote format\n" +
               "   - Include 1 Common Mistake warning\n" +
-              "4. SALARY BENCHMARK TABLE: 2026 Kerala IT salary data in HTML table\n" +
+              "4. SALARY BENCHMARK TABLE: Current Kerala IT salary data in HTML table (use " + year + " figures or latest available)\n" +
               "5. KEY TAKEAWAYS: 5-7 actionable bullet points\n" +
               "6. CONCLUSION: Summary + call to action for Novox courses\n" +
               "7. ABOUT: Brief mention of Novox Edtech as best software training institute in Calicut\n\n" +
@@ -75,24 +201,21 @@ jobs:
               "CONTENT:\n" +
               "[Your full HTML content here]";
 
-            // List of free models to try in order
+            // Models to try
             const models = [
-              "gemini-2.5-flash",        // Best balance, 10 RPM, 250 RPD
-              "gemini-2.5-flash-lite",   // Fastest, 15 RPM, 1000 RPD
-              "gemini-2.5-pro",          // Best quality, 5 RPM, 100 RPD
-              "gemini-2.0-flash",        // Reliable fallback, 10 RPM, 1500 RPD
-              "gemini-2.0-flash-lite",   // Cheapest, 15 RPM, 1500 RPD
-              "gemini-3-flash-preview",  // Newer features
-              "gemini-3.1-flash-lite-preview" // Cost-efficient
+              "gemini-2.5-flash",
+              "gemini-2.5-flash-lite",
+              "gemini-2.5-pro",
+              "gemini-2.0-flash",
+              "gemini-2.0-flash-lite"
             ];
 
             let text = null;
             let usedModel = null;
             let lastError = null;
 
-            // Try each model until one works
             for (const model of models) {
-              console.log("🔄 Trying model: " + model);
+              console.log("🔄 Trying: " + model);
               
               try {
                 const response = await fetch(
@@ -111,27 +234,16 @@ jobs:
                 const data = await response.json();
                 
                 if (data.error) {
-                  console.log("❌ " + model + " failed: " + data.error.message);
+                  console.log("❌ " + model + ": " + data.error.message);
                   lastError = data.error.message;
                   
-                  // If quota exceeded, try next model
-                  if (data.error.code === 429 || data.error.message.includes("quota") || data.error.message.includes("rate limit")) {
-                    console.log("⏳ Quota/rate limit hit, trying next model...");
-                    await new Promise(r => setTimeout(r, 3000));
+                  if (data.error.code === 429 || data.error.message.includes("quota")) {
+                    await new Promise(r => setTimeout(r, 5000));
                     continue;
                   }
-                  
-                  // If model not found, try next
-                  if (data.error.code === 404 || data.error.message.includes("not found")) {
-                    console.log("❌ Model not available, trying next...");
-                    continue;
-                  }
-                  
-                  // Other error, still try next
                   continue;
                 }
 
-                // Success!
                 text = data.candidates[0].content.parts[0].text;
                 usedModel = model;
                 console.log("✅ " + model + " succeeded!");
@@ -140,29 +252,23 @@ jobs:
               } catch (e) {
                 console.log("❌ " + model + " error: " + e.message);
                 lastError = e.message;
-                await new Promise(r => setTimeout(r, 2000));
+                await new Promise(r => setTimeout(r, 3000));
               }
             }
 
-            // If all models failed
             if (!text) {
-              throw new Error("All models failed. Last error: " + lastError);
+              throw new Error("All models failed: " + lastError);
             }
 
-            console.log("📄 Content length: " + text.length);
-            console.log("🤖 Model used: " + usedModel);
-            console.log("First 300 chars: " + text.substring(0, 300));
-
-            // Parse with multiple fallback patterns
+            // Parse fields
             let title = "Untitled";
             let blogCategory = category;
             let summary = "";
-            let tags = "Tech 2026";
+            let tags = "Tech " + year;
             let keywords = "Novox Edtech";
-            let imagePrompt = "technology education 2026";
+            let imagePrompt = "technology education " + year;
             let content = text;
 
-            // Try multiple title patterns
             const titlePatterns = [
               /TITLE:\s*(.+?)(?=\nCATEGORY:)/s,
               /TITLE:\s*(.+?)(?=\n\n)/,
@@ -196,9 +302,6 @@ jobs:
             const contentMatch = text.match(/CONTENT:\s*([\s\S]+)/);
             if (contentMatch) content = contentMatch[1].trim();
 
-            console.log("📝 Parsed title: " + title);
-            console.log("🏷️ Category: " + blogCategory);
-
             // Generate image
             const encodedPrompt = encodeURIComponent(imagePrompt.substring(0, 50));
             const imageUrl = "https://image.pollinations.ai/prompt/" + encodedPrompt + "?width=1200&height=630&nologo=true";
@@ -206,7 +309,7 @@ jobs:
             // Build body
             const body = "![Blog Thumbnail](" + imageUrl + ")\n\n" +
               "# " + title + "\n\n" +
-              "**Published by Novoxed Tech LLP** | " + new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + "\n\n" +
+              "**Published by Novoxed Tech LLP** | " + month + " " + year + "\n\n" +
               "> " + summary + "\n\n" +
               "---\n\n" +
               content + "\n\n" +
@@ -225,16 +328,15 @@ jobs:
               "📍 **Novox Edtech LLP** | Calicut, Kerala\n" +
               "🌐 [novoxedtechllp.com](https://novoxedtechllp.com)";
 
-            // Create issue
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: title,
               body: body,
-              labels: ["blog", "ai-generated", "2026", topic.toLowerCase()]
+              labels: ["blog", "ai-generated", year, topic.toLowerCase()]
             });
 
             console.log("✅ Created: " + title);
+            console.log("📅 Date: " + month + " " + year);
             console.log("📂 Topic: " + topic);
-            console.log("🏷️ Category: " + blogCategory);
-            console.log("🤖 Model used: " + usedModel);
+            console.log("🤖 Model: " + usedModel);
