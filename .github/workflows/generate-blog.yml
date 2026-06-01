@@ -17,47 +17,45 @@ jobs:
         run: |
           echo "🌐 Fetching website data from Novox Edtech..."
           
-          # Fetch Courses page
-          echo "📚 Fetching /courses..."
-          curl -s --max-time 15 https://novoxedtechllp.com/courses > /tmp/courses.html 2>/dev/null || echo "Failed to fetch courses"
-          
-          # Fetch About page
-          echo "🏢 Fetching /about..."
-          curl -s --max-time 15 https://novoxedtechllp.com/about > /tmp/about.html 2>/dev/null || echo "Failed to fetch about"
-          
-          # Fetch Homepage
-          echo "🏠 Fetching homepage..."
-          curl -s --max-time 15 https://novoxedtechllp.com > /tmp/home.html 2>/dev/null || echo "Failed to fetch home"
+          # Fetch pages
+          curl -s --max-time 15 https://novoxedtechllp.com/courses > /tmp/courses.html 2>/dev/null || echo "Failed courses"
+          curl -s --max-time 15 https://novoxedtechllp.com/about > /tmp/about.html 2>/dev/null || echo "Failed about"
+          curl -s --max-time 15 https://novoxedtechllp.com > /tmp/home.html 2>/dev/null || echo "Failed home"
           
           # ============================================
-          # EXTRACT COURSES FROM /courses PAGE
+          # EXTRACT COURSES — Simple patterns
           # ============================================
           echo "🔍 Extracting courses..."
           
-          # Common patterns for course names in HTML
-          # Try to find course titles in headings, cards, or links
-          cat /tmp/courses.html 2>/dev/null | grep -oiP '(?<=<h[1-6][^>]*>)[^<]+' | grep -vi "courses\|home\|about\|contact" > /tmp/extracted_courses.txt
-          cat /tmp/courses.html 2>/dev/null | grep -oiP '(?<=class="[^"]*course[^"]*"[^>]*>)[^<]+' >> /tmp/extracted_courses.txt
-          cat /tmp/courses.html 2>/dev/null | grep -oiP '(?<=alt=")[^"]+' | grep -i "course\|training\|program" >> /tmp/extracted_courses.txt
+          # Extract text from h1-h6 tags (remove HTML tags)
+          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/courses.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > /tmp/extracted_courses.txt
           
-          # Clean up and get unique courses
-          cat /tmp/extracted_courses.txt | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sort -u | grep -v "^$" | head -10 > /tmp/courses_clean.txt
+          # Extract from title attributes
+          grep -oi 'title="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/title="//;s/"$//' >> /tmp/extracted_courses.txt
+          
+          # Extract from alt attributes
+          grep -oi 'alt="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/alt="//;s/"$//' >> /tmp/extracted_courses.txt
+          
+          # Extract from meta description
+          grep -oi 'content="[^"]*"' /tmp/courses.html 2>/dev/null | sed 's/content="//;s/"$//' >> /tmp/extracted_courses.txt
+          
+          # Clean up: remove generic words, keep course-like terms
+          cat /tmp/extracted_courses.txt | grep -vi "^courses$\|^home$\|^about$\|^contact$\|^blog$" | sort -u | grep -v "^$" | head -15 > /tmp/courses_clean.txt
           
           echo "📋 Found courses:"
           cat /tmp/courses_clean.txt || echo "No courses found"
           
           # ============================================
-          # EXTRACT SERVICES/FOCUS FROM /about PAGE
+          # EXTRACT ABOUT INFO
           # ============================================
           echo "🔍 Extracting about info..."
           
-          cat /tmp/about.html 2>/dev/null | grep -oiP '(?<=<h[1-6][^>]*>)[^<]+' | grep -vi "about\|home\|contact" > /tmp/extracted_about.txt
-          cat /tmp/about.html 2>/dev/null | grep -oiP '(?<=<p[^>]*>)[^<]{20,}' | head -5 >> /tmp/extracted_about.txt
-          cat /tmp/about.html 2>/dev/null | grep -oiP '(?<=alt=")[^"]+' >> /tmp/extracted_about.txt
+          grep -oi '<h[1-6][^>]*>[^<]*' /tmp/about.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > /tmp/extracted_about.txt
+          grep -oi '<p[^>]*>[^<]*' /tmp/about.html 2>/dev/null | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v "^$" | head -5 >> /tmp/extracted_about.txt
           
-          cat /tmp/extracted_about.txt | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sort -u | grep -v "^$" | head -10 > /tmp/about_clean.txt
+          cat /tmp/extracted_about.txt | sort -u | grep -v "^$" | head -10 > /tmp/about_clean.txt
           
-          echo "📋 Found about topics:"
+          echo "📋 Found about info:"
           cat /tmp/about_clean.txt || echo "No about info found"
           
           # ============================================
@@ -65,15 +63,14 @@ jobs:
           # ============================================
           echo "🔍 Extracting homepage keywords..."
           
-          cat /tmp/home.html 2>/dev/null | grep -oiP '(?<=<meta name="keywords" content=")[^"]+' > /tmp/keywords.txt
-          cat /tmp/home.html 2>/dev/null | grep -oiP '(?<=<title>)[^<]+' >> /tmp/keywords.txt
+          grep -oi '<meta[^>]*keywords[^>]*>' /tmp/home.html 2>/dev/null | sed 's/.*content="//;s/".*//' > /tmp/keywords.txt
+          grep -oi '<title>[^<]*' /tmp/home.html 2>/dev/null | sed 's/<title>//' >> /tmp/keywords.txt
           
           # ============================================
           # BUILD DYNAMIC TOPIC LIST
           # ============================================
           echo "🏗️ Building dynamic topic list..."
           
-          # Combine all extracted data
           {
             echo "=== COURSES ==="
             cat /tmp/courses_clean.txt
@@ -89,7 +86,6 @@ jobs:
           cat /tmp/website_data.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           
-          # Save courses specifically for topic selection
           echo "courses<<EOF" >> $GITHUB_OUTPUT
           cat /tmp/courses_clean.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -97,25 +93,20 @@ jobs:
       - name: Select Topic from Website Data
         id: topic
         run: |
-          WEBSITE_DATA=$(cat /tmp/website_data.txt)
           COURSES=$(cat /tmp/courses_clean.txt)
           
           echo "🎯 Selecting topic based on website data..."
           
-          # ============================================
-          # DYNAMIC TOPIC DETECTION
-          # ============================================
-          
-          # Check what courses are actually offered
+          # Detect courses with simple string matching
           HAS_MERN=$(echo "$COURSES" | grep -ci "mern\|react\|node\|mongo" || echo "0")
           HAS_FLUTTER=$(echo "$COURSES" | grep -ci "flutter\|dart\|mobile" || echo "0")
           HAS_PYTHON=$(echo "$COURSES" | grep -ci "python\|django\|data" || echo "0")
           HAS_UIUX=$(echo "$COURSES" | grep -ci "ui\|ux\|design\|figma" || echo "0")
           HAS_MARKETING=$(echo "$COURSES" | grep -ci "digital\|marketing\|seo\|social" || echo "0")
           
-          echo "Course detection: MERN=$HAS_MERN, Flutter=$HAS_FLUTTER, Python=$HAS_PYTHON, UI/UX=$HAS_UIUX, Marketing=$HAS_MARKETING"
+          echo "Detection: MERN=$HAS_MERN, Flutter=$HAS_FLUTTER, Python=$HAS_PYTHON, UI/UX=$HAS_UIUX, Marketing=$HAS_MARKETING"
           
-          # Build dynamic topic pool based on actual courses
+          # Build topic pool
           TOPIC_POOL=()
           
           if [ "$HAS_MERN" -gt 0 ]; then
@@ -140,26 +131,21 @@ jobs:
             TOPIC_POOL+=("seo:MARKETING:Digital Marketing:SEO & Content:Search engine optimization, content strategy, and organic growth trends")
           fi
           
-          # Always add career and education topics (universal)
+          # Universal topics (always included)
           TOPIC_POOL+=("placement:CAREER:Career & Placement:Placement & Jobs:Job market trends, interview preparation, and placement strategies for Kerala tech graduates")
           TOPIC_POOL+=("career:CAREER:Career & Placement:Career Growth:Career advancement, salary negotiation, and professional development for IT professionals")
           TOPIC_POOL+=("education:EDUCATION:Education & Learning:IT Education:IT education trends, learning methodologies, and skill development in Calicut")
           TOPIC_POOL+=("learning:EDUCATION:Education & Learning:Learning Paths:Effective learning strategies, bootcamp vs degree, and self-paced learning trends")
           
-          # ============================================
-          # SELECT TOPIC BASED ON DAY
-          # ============================================
-          
+          # Select based on day
           DAY=$(date +%u)
           WEEK_OF_MONTH=$(( ($(date +%d) - 1) / 7 + 1 ))
           
-          # Use day and week to pick from pool
           POOL_SIZE=${#TOPIC_POOL[@]}
           INDEX=$(( (DAY + WEEK_OF_MONTH - 1) % POOL_SIZE ))
           
           SELECTED="${TOPIC_POOL[$INDEX]}"
           
-          # Parse selection
           IFS=: read -r keyword topic category focus_desc <<< "$SELECTED"
           
           echo "✅ Selected: $keyword → $topic → $category"
@@ -185,46 +171,39 @@ jobs:
             const year = new Date().getFullYear();
             const month = new Date().toLocaleString('en-US', { month: 'long' });
             
-            // Get website data for context
             const websiteData = `${{ steps.website.outputs.website_data }}`;
             
             const prompt = "You are a senior content strategist for Novox Edtech LLP, a premier IT training institute in Calicut, Kerala.\n\n" +
               "WEBSITE CONTEXT:\n" +
-              "The following content was extracted from Novox Edtech's website (courses page, about page, homepage):\n" +
+              "Extracted from Novox website:\n" +
               websiteData + "\n\n" +
-              "Based on this website content, write a comprehensive, authoritative blog post (2500+ words) about " + focus + ".\n\n" +
-              "TIME CONTEXT: " + month + " " + year + "\n\n" +
-              "AUDIENCE: Aspiring developers, career switchers, and professionals aged 20-30 in Kerala\n\n" +
-              "STRUCTURE REQUIREMENTS:\n" +
-              "1. HEADLINE: Compelling title referencing current trends\n" +
-              "2. INTRODUCTION: Hook with real statistic about Kerala/India tech scene\n" +
-              "3. MAIN CONTENT (6-8 sections):\n" +
-              "   - Use clear h2 headings\n" +
-              "   - Include specific salary data, hiring numbers\n" +
-              "   - Include HTML comparison tables\n" +
-              "   - Include 2-3 Pro Tips in blockquote\n" +
-              "   - Include 1 Common Mistake warning\n" +
-              "4. SALARY BENCHMARK TABLE: Current Kerala IT salaries\n" +
-              "5. KEY TAKEAWAYS: 5-7 actionable points\n" +
+              "Based on this content, write a comprehensive blog post (2500+ words) about " + focus + ".\n\n" +
+              "TIME: " + month + " " + year + "\n" +
+              "AUDIENCE: Aspiring developers, career switchers in Kerala\n\n" +
+              "STRUCTURE:\n" +
+              "1. HEADLINE: Compelling title\n" +
+              "2. INTRODUCTION: Hook with Kerala/India tech statistic\n" +
+              "3. MAIN CONTENT (6-8 sections with h2):\n" +
+              "   - Specific salary data, hiring numbers\n" +
+              "   - HTML comparison tables\n" +
+              "   - 2-3 Pro Tips in blockquote\n" +
+              "   - 1 Common Mistake warning\n" +
+              "4. SALARY TABLE: Kerala IT salaries\n" +
+              "5. KEY TAKEAWAYS: 5-7 bullets\n" +
               "6. CONCLUSION: Summary + call to action\n" +
-              "7. ABOUT: Mention Novox Edtech as best software training institute in Calicut\n\n" +
-              "SEO:\n" +
-              "- Include 'best software training institute in Calicut' 2 times\n" +
-              "- Include 'IT training in Kozhikode' 1 time\n\n" +
-              "FORMAT:\n" +
-              "- Use HTML: h2, h3, p, ul, li, strong, table, blockquote\n" +
-              "- NO markdown symbols\n\n" +
-              "OUTPUT FORMAT:\n" +
+              "7. ABOUT: Novox Edtech as best software training institute in Calicut\n\n" +
+              "SEO: Include 'best software training institute in Calicut' 2x, 'IT training in Kozhikode' 1x\n\n" +
+              "FORMAT: HTML only (h2, h3, p, ul, li, strong, table, blockquote). NO markdown.\n\n" +
+              "OUTPUT:\n" +
               "TITLE: [Title]\n" +
               "CATEGORY: " + category + "\n" +
-              "SUMMARY: [2-sentence summary]\n" +
+              "SUMMARY: [2 sentences]\n" +
               "TAGS: [tag1, tag2, tag3]\n" +
-              "KEYWORDS: [keyword1, keyword2, keyword3]\n" +
-              "IMAGE_PROMPT: [image description]\n" +
+              "KEYWORDS: [kw1, kw2, kw3]\n" +
+              "IMAGE_PROMPT: [description]\n" +
               "CONTENT:\n" +
-              "[HTML content]";
+              "[HTML]";
 
-            // Try multiple models
             const models = [
               "gemini-2.5-flash",
               "gemini-2.5-flash-lite",
@@ -271,7 +250,7 @@ jobs:
 
             if (!text) throw new Error("All models failed");
 
-            // Parse fields
+            // Parse
             let title = "Untitled";
             let blogCategory = category;
             let summary = "";
@@ -301,10 +280,8 @@ jobs:
             const contentMatch = text.match(/CONTENT:\s*([\s\S]+)/);
             if (contentMatch) content = contentMatch[1].trim();
 
-            // Generate image
             const imageUrl = "https://image.pollinations.ai/prompt/" + encodeURIComponent(imagePrompt.substring(0, 50)) + "?width=1200&height=630&nologo=true";
 
-            // Build body
             const body = "![Blog Thumbnail](" + imageUrl + ")\n\n" +
               "# " + title + "\n\n" +
               "**Published by Novoxed Tech LLP** | " + month + " " + year + "\n\n" +
