@@ -12,196 +12,219 @@ jobs:
       issues: write
     
     steps:
-      - name: Get Current Year
-        id: date
+      - name: Fetch Website Data Dynamically
+        id: website
         run: |
-          echo "year=$(date +%Y)" >> $GITHUB_OUTPUT
-          echo "month=$(date +%B)" >> $GITHUB_OUTPUT
+          echo "🌐 Fetching website data from Novox Edtech..."
+          
+          # Fetch Courses page
+          echo "📚 Fetching /courses..."
+          curl -s --max-time 15 https://novoxedtechllp.com/courses > /tmp/courses.html 2>/dev/null || echo "Failed to fetch courses"
+          
+          # Fetch About page
+          echo "🏢 Fetching /about..."
+          curl -s --max-time 15 https://novoxedtechllp.com/about > /tmp/about.html 2>/dev/null || echo "Failed to fetch about"
+          
+          # Fetch Homepage
+          echo "🏠 Fetching homepage..."
+          curl -s --max-time 15 https://novoxedtechllp.com > /tmp/home.html 2>/dev/null || echo "Failed to fetch home"
+          
+          # ============================================
+          # EXTRACT COURSES FROM /courses PAGE
+          # ============================================
+          echo "🔍 Extracting courses..."
+          
+          # Common patterns for course names in HTML
+          # Try to find course titles in headings, cards, or links
+          cat /tmp/courses.html 2>/dev/null | grep -oiP '(?<=<h[1-6][^>]*>)[^<]+' | grep -vi "courses\|home\|about\|contact" > /tmp/extracted_courses.txt
+          cat /tmp/courses.html 2>/dev/null | grep -oiP '(?<=class="[^"]*course[^"]*"[^>]*>)[^<]+' >> /tmp/extracted_courses.txt
+          cat /tmp/courses.html 2>/dev/null | grep -oiP '(?<=alt=")[^"]+' | grep -i "course\|training\|program" >> /tmp/extracted_courses.txt
+          
+          # Clean up and get unique courses
+          cat /tmp/extracted_courses.txt | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sort -u | grep -v "^$" | head -10 > /tmp/courses_clean.txt
+          
+          echo "📋 Found courses:"
+          cat /tmp/courses_clean.txt || echo "No courses found"
+          
+          # ============================================
+          # EXTRACT SERVICES/FOCUS FROM /about PAGE
+          # ============================================
+          echo "🔍 Extracting about info..."
+          
+          cat /tmp/about.html 2>/dev/null | grep -oiP '(?<=<h[1-6][^>]*>)[^<]+' | grep -vi "about\|home\|contact" > /tmp/extracted_about.txt
+          cat /tmp/about.html 2>/dev/null | grep -oiP '(?<=<p[^>]*>)[^<]{20,}' | head -5 >> /tmp/extracted_about.txt
+          cat /tmp/about.html 2>/dev/null | grep -oiP '(?<=alt=")[^"]+' >> /tmp/extracted_about.txt
+          
+          cat /tmp/extracted_about.txt | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sort -u | grep -v "^$" | head -10 > /tmp/about_clean.txt
+          
+          echo "📋 Found about topics:"
+          cat /tmp/about_clean.txt || echo "No about info found"
+          
+          # ============================================
+          # EXTRACT KEYWORDS FROM HOMEPAGE
+          # ============================================
+          echo "🔍 Extracting homepage keywords..."
+          
+          cat /tmp/home.html 2>/dev/null | grep -oiP '(?<=<meta name="keywords" content=")[^"]+' > /tmp/keywords.txt
+          cat /tmp/home.html 2>/dev/null | grep -oiP '(?<=<title>)[^<]+' >> /tmp/keywords.txt
+          
+          # ============================================
+          # BUILD DYNAMIC TOPIC LIST
+          # ============================================
+          echo "🏗️ Building dynamic topic list..."
+          
+          # Combine all extracted data
+          {
+            echo "=== COURSES ==="
+            cat /tmp/courses_clean.txt
+            echo ""
+            echo "=== ABOUT ==="
+            cat /tmp/about_clean.txt
+            echo ""
+            echo "=== KEYWORDS ==="
+            cat /tmp/keywords.txt
+          } > /tmp/website_data.txt
+          
+          echo "website_data<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/website_data.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          # Save courses specifically for topic selection
+          echo "courses<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/courses_clean.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Smart Topic Selection
+      - name: Select Topic from Website Data
         id: topic
         run: |
+          WEBSITE_DATA=$(cat /tmp/website_data.txt)
+          COURSES=$(cat /tmp/courses_clean.txt)
+          
+          echo "🎯 Selecting topic based on website data..."
+          
           # ============================================
-          # TOPIC MAP — Update when courses change
+          # DYNAMIC TOPIC DETECTION
           # ============================================
-          declare -A TOPIC_MAP=(
-            ["mern"]="TECH:Tech & Programming:MERN Stack Development:Latest trends in MERN Stack, React, Node.js, and MongoDB for full-stack developers"
-            ["flutter"]="TECH:Tech & Programming:Flutter Development:Cross-platform mobile development with Flutter, Dart, and responsive design trends"
-            ["python"]="TECH:Tech & Programming:Python & Data Science:Python programming, data science, machine learning, and AI integration trends"
-            ["react"]="TECH:Tech & Programming:React & Frontend:Modern React development, Next.js, and frontend architecture trends"
-            ["node"]="TECH:Tech & Programming:Backend Development:Node.js, Express, and backend API development trends"
-            
-            ["ui"]="DESIGN:UI/UX Design:UI/UX Design:Latest UI/UX design trends, Figma, prototyping, and design systems"
-            ["ux"]="DESIGN:UI/UX Design:User Experience:User research, usability testing, and experience design trends"
-            ["figma"]="DESIGN:UI/UX Design:Design Tools:Figma, Adobe XD, and modern design workflow trends"
-            
-            ["digital"]="MARKETING:Digital Marketing:Digital Marketing:Digital marketing strategies, SEO, content marketing, and analytics trends"
-            ["seo"]="MARKETING:Digital Marketing:SEO & Content:Search engine optimization, content strategy, and organic growth trends"
-            ["social"]="MARKETING:Digital Marketing:Social Media:Social media marketing, influencer strategies, and community building"
-            
-            ["placement"]="CAREER:Career & Placement:Placement & Jobs:Job market trends, interview preparation, and placement strategies for Kerala tech graduates"
-            ["career"]="CAREER:Career & Placement:Career Growth:Career advancement, salary negotiation, and professional development for IT professionals"
-            ["interview"]="CAREER:Career & Placement:Interview Prep:Technical interview preparation, coding challenges, and soft skills for hiring"
-            
-            ["education"]="EDUCATION:Education & Learning:IT Education:IT education trends, learning methodologies, and skill development in Calicut"
-            ["learning"]="EDUCATION:Education & Learning:Learning Paths:Effective learning strategies, bootcamp vs degree, and self-paced learning trends"
-            ["course"]="EDUCATION:Education & Learning:Course Selection:How to choose the right IT course, certification value, and ROI on tech education"
-          )
-
-          # Try to detect from website
-          echo "🔍 Checking website..."
           
-          for i in 1 2 3; do
-            if curl -s --max-time 10 https://novoxedtechllp.com > /tmp/site.html 2>/dev/null; then
-              echo "✅ Website fetched"
-              break
-            fi
-            sleep 2
-          done
-
-          SELECTED_TOPIC=""
-          TOPIC_COUNT=0
+          # Check what courses are actually offered
+          HAS_MERN=$(echo "$COURSES" | grep -ci "mern\|react\|node\|mongo" || echo "0")
+          HAS_FLUTTER=$(echo "$COURSES" | grep -ci "flutter\|dart\|mobile" || echo "0")
+          HAS_PYTHON=$(echo "$COURSES" | grep -ci "python\|django\|data" || echo "0")
+          HAS_UIUX=$(echo "$COURSES" | grep -ci "ui\|ux\|design\|figma" || echo "0")
+          HAS_MARKETING=$(echo "$COURSES" | grep -ci "digital\|marketing\|seo\|social" || echo "0")
           
-          if [ -f /tmp/site.html ]; then
-            for keyword in "${!TOPIC_MAP[@]}"; do
-              count=$(grep -oi "$keyword" /tmp/site.html | wc -l)
-              if [ "$count" -gt "$TOPIC_COUNT" ]; then
-                TOPIC_COUNT=$count
-                SELECTED_TOPIC=$keyword
-              fi
-            done
-          fi
-
-          # Fallback to day-based rotation
-          if [ -z "$SELECTED_TOPIC" ] || [ "$TOPIC_COUNT" -lt 2 ]; then
-            echo "🔄 Using day-based rotation"
-            
-            DAY=$(date +%u)
-            WEEK_OF_MONTH=$(( ($(date +%d) - 1) / 7 + 1 ))
-            
-            case $DAY in
-              1)
-                case $WEEK_OF_MONTH in
-                  1) SELECTED_TOPIC="mern" ;;
-                  2) SELECTED_TOPIC="flutter" ;;
-                  3) SELECTED_TOPIC="python" ;;
-                  *) SELECTED_TOPIC="react" ;;
-                esac
-                ;;
-              2)
-                case $WEEK_OF_MONTH in
-                  1|3) SELECTED_TOPIC="ui" ;;
-                  *) SELECTED_TOPIC="ux" ;;
-                esac
-                ;;
-              3)
-                case $WEEK_OF_MONTH in
-                  1|3) SELECTED_TOPIC="digital" ;;
-                  *) SELECTED_TOPIC="seo" ;;
-                esac
-                ;;
-              4)
-                case $WEEK_OF_MONTH in
-                  1) SELECTED_TOPIC="node" ;;
-                  2) SELECTED_TOPIC="python" ;;
-                  3) SELECTED_TOPIC="mern" ;;
-                  *) SELECTED_TOPIC="flutter" ;;
-                esac
-                ;;
-              5)
-                case $WEEK_OF_MONTH in
-                  1|3) SELECTED_TOPIC="figma" ;;
-                  *) SELECTED_TOPIC="career" ;;
-                esac
-                ;;
-              6)
-                case $WEEK_OF_MONTH in
-                  1|3) SELECTED_TOPIC="placement" ;;
-                  *) SELECTED_TOPIC="interview" ;;
-                esac
-                ;;
-              *)
-                case $WEEK_OF_MONTH in
-                  1|3) SELECTED_TOPIC="education" ;;
-                  *) SELECTED_TOPIC="learning" ;;
-                esac
-                ;;
-            esac
-          else
-            echo "🎯 Detected from website: $SELECTED_TOPIC"
-          fi
-
-          IFS=: read -r topic category focus_desc <<< "${TOPIC_MAP[$SELECTED_TOPIC]}"
+          echo "Course detection: MERN=$HAS_MERN, Flutter=$HAS_FLUTTER, Python=$HAS_PYTHON, UI/UX=$HAS_UIUX, Marketing=$HAS_MARKETING"
           
-          if [ -z "$topic" ]; then
-            topic="TECH"
-            category="Tech & Programming"
-            focus_desc="Latest technology trends in software development"
+          # Build dynamic topic pool based on actual courses
+          TOPIC_POOL=()
+          
+          if [ "$HAS_MERN" -gt 0 ]; then
+            TOPIC_POOL+=("mern:TECH:Tech & Programming:MERN Stack Development:Latest trends in MERN Stack, React, Node.js, and MongoDB for full-stack developers")
           fi
-
+          
+          if [ "$HAS_FLUTTER" -gt 0 ]; then
+            TOPIC_POOL+=("flutter:TECH:Tech & Programming:Flutter Development:Cross-platform mobile development with Flutter, Dart, and responsive design trends")
+          fi
+          
+          if [ "$HAS_PYTHON" -gt 0 ]; then
+            TOPIC_POOL+=("python:TECH:Tech & Programming:Python & Data Science:Python programming, data science, machine learning, and AI integration trends")
+          fi
+          
+          if [ "$HAS_UIUX" -gt 0 ]; then
+            TOPIC_POOL+=("ui:DESIGN:UI/UX Design:UI/UX Design:Latest UI/UX design trends, Figma, prototyping, and design systems")
+            TOPIC_POOL+=("ux:DESIGN:UI/UX Design:User Experience:User research, usability testing, and experience design trends")
+          fi
+          
+          if [ "$HAS_MARKETING" -gt 0 ]; then
+            TOPIC_POOL+=("digital:MARKETING:Digital Marketing:Digital Marketing:Digital marketing strategies, SEO, content marketing, and analytics trends")
+            TOPIC_POOL+=("seo:MARKETING:Digital Marketing:SEO & Content:Search engine optimization, content strategy, and organic growth trends")
+          fi
+          
+          # Always add career and education topics (universal)
+          TOPIC_POOL+=("placement:CAREER:Career & Placement:Placement & Jobs:Job market trends, interview preparation, and placement strategies for Kerala tech graduates")
+          TOPIC_POOL+=("career:CAREER:Career & Placement:Career Growth:Career advancement, salary negotiation, and professional development for IT professionals")
+          TOPIC_POOL+=("education:EDUCATION:Education & Learning:IT Education:IT education trends, learning methodologies, and skill development in Calicut")
+          TOPIC_POOL+=("learning:EDUCATION:Education & Learning:Learning Paths:Effective learning strategies, bootcamp vs degree, and self-paced learning trends")
+          
+          # ============================================
+          # SELECT TOPIC BASED ON DAY
+          # ============================================
+          
+          DAY=$(date +%u)
+          WEEK_OF_MONTH=$(( ($(date +%d) - 1) / 7 + 1 ))
+          
+          # Use day and week to pick from pool
+          POOL_SIZE=${#TOPIC_POOL[@]}
+          INDEX=$(( (DAY + WEEK_OF_MONTH - 1) % POOL_SIZE ))
+          
+          SELECTED="${TOPIC_POOL[$INDEX]}"
+          
+          # Parse selection
+          IFS=: read -r keyword topic category focus_desc <<< "$SELECTED"
+          
+          echo "✅ Selected: $keyword → $topic → $category"
+          echo "📝 Focus: $focus_desc"
+          
           echo "topic=$topic" >> $GITHUB_OUTPUT
           echo "category=$category" >> $GITHUB_OUTPUT
           echo "focus=$focus_desc" >> $GITHUB_OUTPUT
-          echo "selected_keyword=$SELECTED_TOPIC" >> $GITHUB_OUTPUT
+          echo "keyword=$keyword" >> $GITHUB_OUTPUT
 
       - name: Generate Blog
         uses: actions/github-script@v7
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          CURRENT_YEAR: ${{ steps.date.outputs.year }}
-          CURRENT_MONTH: ${{ steps.date.outputs.month }}
         with:
           retries: 3
           script: |
-            const year = process.env.CURRENT_YEAR;
-            const month = process.env.CURRENT_MONTH;
             const topic = "${{ steps.topic.outputs.topic }}";
             const category = "${{ steps.topic.outputs.category }}";
             const focus = "${{ steps.topic.outputs.focus }}";
-            const selectedKeyword = "${{ steps.topic.outputs.selected_keyword }}";
-
-            const prompt = "You are a senior content strategist for Novox Edtech LLP, a premier IT training institute in Calicut, Kerala. Write a comprehensive, authoritative blog post (2500+ words) about " + focus + ".\n\n" +
-              "TIME CONTEXT: This article is being written in " + month + " " + year + ". Reference current trends, latest data, and recent developments as of " + year + ".\n\n" +
-              "CONTEXT:\n" +
-              "- Novox Edtech specializes in: MERN Stack, Flutter, Python + React, UI/UX Design, Digital Marketing\n" +
-              "- Location: Calicut, Kerala\n" +
-              "- Target audience: Aspiring developers, career switchers, and professionals aged 20-30 in Kerala\n" +
-              "- Current focus area: " + focus + "\n" +
-              "- Selected topic: " + selectedKeyword + "\n\n" +
+            const keyword = "${{ steps.topic.outputs.keyword }}";
+            const year = new Date().getFullYear();
+            const month = new Date().toLocaleString('en-US', { month: 'long' });
+            
+            // Get website data for context
+            const websiteData = `${{ steps.website.outputs.website_data }}`;
+            
+            const prompt = "You are a senior content strategist for Novox Edtech LLP, a premier IT training institute in Calicut, Kerala.\n\n" +
+              "WEBSITE CONTEXT:\n" +
+              "The following content was extracted from Novox Edtech's website (courses page, about page, homepage):\n" +
+              websiteData + "\n\n" +
+              "Based on this website content, write a comprehensive, authoritative blog post (2500+ words) about " + focus + ".\n\n" +
+              "TIME CONTEXT: " + month + " " + year + "\n\n" +
+              "AUDIENCE: Aspiring developers, career switchers, and professionals aged 20-30 in Kerala\n\n" +
               "STRUCTURE REQUIREMENTS:\n" +
-              "1. HEADLINE: Compelling, specific title referencing " + year + " or current trends\n" +
-              "2. INTRODUCTION (2-3 paragraphs): Hook with real statistic about Kerala/India tech scene as of " + year + "\n" +
-              "3. MAIN CONTENT (6-8 sections, 300-400 words each):\n" +
-              "   - Use clear h2 headings for each section\n" +
-              "   - Include specific data: salary figures, hiring numbers, market growth (use " + year + " data or most recent available)\n" +
-              "   - Include comparison tables using HTML table tags\n" +
-              "   - Include 2-3 Pro Tips in blockquote format\n" +
+              "1. HEADLINE: Compelling title referencing current trends\n" +
+              "2. INTRODUCTION: Hook with real statistic about Kerala/India tech scene\n" +
+              "3. MAIN CONTENT (6-8 sections):\n" +
+              "   - Use clear h2 headings\n" +
+              "   - Include specific salary data, hiring numbers\n" +
+              "   - Include HTML comparison tables\n" +
+              "   - Include 2-3 Pro Tips in blockquote\n" +
               "   - Include 1 Common Mistake warning\n" +
-              "4. SALARY BENCHMARK TABLE: Current Kerala IT salary data in HTML table (use " + year + " figures or latest available)\n" +
-              "5. KEY TAKEAWAYS: 5-7 actionable bullet points\n" +
-              "6. CONCLUSION: Summary + call to action for Novox courses\n" +
-              "7. ABOUT: Brief mention of Novox Edtech as best software training institute in Calicut\n\n" +
-              "SEO REQUIREMENTS:\n" +
-              "- Naturally include 'best software training institute in Calicut' 2 times\n" +
-              "- Naturally include 'IT training in Kozhikode' 1 time\n" +
-              "- Include target keywords in first 100 words\n\n" +
-              "FORMATTING:\n" +
-              "- Use clean HTML: h2, h3, p, ul, li, strong, table, tr, th, td, blockquote\n" +
-              "- NO markdown symbols (#, **, ```)\n" +
-              "- NO generic fluff like 'In today's fast-paced world'\n" +
-              "- Every paragraph must contain specific data or actionable advice\n\n" +
-              "OUTPUT FORMAT (STRICT):\n" +
-              "TITLE: [Your Title Here]\n" +
+              "4. SALARY BENCHMARK TABLE: Current Kerala IT salaries\n" +
+              "5. KEY TAKEAWAYS: 5-7 actionable points\n" +
+              "6. CONCLUSION: Summary + call to action\n" +
+              "7. ABOUT: Mention Novox Edtech as best software training institute in Calicut\n\n" +
+              "SEO:\n" +
+              "- Include 'best software training institute in Calicut' 2 times\n" +
+              "- Include 'IT training in Kozhikode' 1 time\n\n" +
+              "FORMAT:\n" +
+              "- Use HTML: h2, h3, p, ul, li, strong, table, blockquote\n" +
+              "- NO markdown symbols\n\n" +
+              "OUTPUT FORMAT:\n" +
+              "TITLE: [Title]\n" +
               "CATEGORY: " + category + "\n" +
-              "SUMMARY: [Your 2-sentence summary here]\n" +
+              "SUMMARY: [2-sentence summary]\n" +
               "TAGS: [tag1, tag2, tag3]\n" +
               "KEYWORDS: [keyword1, keyword2, keyword3]\n" +
-              "IMAGE_PROMPT: [Your image description here]\n" +
+              "IMAGE_PROMPT: [image description]\n" +
               "CONTENT:\n" +
-              "[Your full HTML content here]";
+              "[HTML content]";
 
-            // Models to try
+            // Try multiple models
             const models = [
               "gemini-2.5-flash",
               "gemini-2.5-flash-lite",
@@ -212,11 +235,8 @@ jobs:
 
             let text = null;
             let usedModel = null;
-            let lastError = null;
 
             for (const model of models) {
-              console.log("🔄 Trying: " + model);
-              
               try {
                 const response = await fetch(
                   "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + process.env.GEMINI_API_KEY,
@@ -235,12 +255,7 @@ jobs:
                 
                 if (data.error) {
                   console.log("❌ " + model + ": " + data.error.message);
-                  lastError = data.error.message;
-                  
-                  if (data.error.code === 429 || data.error.message.includes("quota")) {
-                    await new Promise(r => setTimeout(r, 5000));
-                    continue;
-                  }
+                  if (data.error.code === 429) await new Promise(r => setTimeout(r, 5000));
                   continue;
                 }
 
@@ -251,14 +266,10 @@ jobs:
                 
               } catch (e) {
                 console.log("❌ " + model + " error: " + e.message);
-                lastError = e.message;
-                await new Promise(r => setTimeout(r, 3000));
               }
             }
 
-            if (!text) {
-              throw new Error("All models failed: " + lastError);
-            }
+            if (!text) throw new Error("All models failed");
 
             // Parse fields
             let title = "Untitled";
@@ -266,23 +277,11 @@ jobs:
             let summary = "";
             let tags = "Tech " + year;
             let keywords = "Novox Edtech";
-            let imagePrompt = "technology education " + year;
+            let imagePrompt = "technology education";
             let content = text;
 
-            const titlePatterns = [
-              /TITLE:\s*(.+?)(?=\nCATEGORY:)/s,
-              /TITLE:\s*(.+?)(?=\n\n)/,
-              /TITLE:\s*(.+)/,
-              /^(.+?)(?=\nCATEGORY:)/s
-            ];
-            
-            for (const pattern of titlePatterns) {
-              const match = text.match(pattern);
-              if (match && match[1].trim() && match[1].trim() !== "Untitled") {
-                title = match[1].trim();
-                break;
-              }
-            }
+            const titleMatch = text.match(/TITLE:\s*(.+?)(?=\nCATEGORY:)/s) || text.match(/TITLE:\s*(.+)/);
+            if (titleMatch) title = titleMatch[1].trim();
 
             const catMatch = text.match(/CATEGORY:\s*(.+?)(?=\nSUMMARY:)/s);
             if (catMatch) blogCategory = catMatch[1].trim();
@@ -303,8 +302,7 @@ jobs:
             if (contentMatch) content = contentMatch[1].trim();
 
             // Generate image
-            const encodedPrompt = encodeURIComponent(imagePrompt.substring(0, 50));
-            const imageUrl = "https://image.pollinations.ai/prompt/" + encodedPrompt + "?width=1200&height=630&nologo=true";
+            const imageUrl = "https://image.pollinations.ai/prompt/" + encodeURIComponent(imagePrompt.substring(0, 50)) + "?width=1200&height=630&nologo=true";
 
             // Build body
             const body = "![Blog Thumbnail](" + imageUrl + ")\n\n" +
@@ -316,27 +314,23 @@ jobs:
               "---\n\n" +
               "## Key Takeaways\n\n" +
               "- Stay updated with latest frameworks and tools\n" +
-              "- Focus on full-stack capabilities for better opportunities\n" +
-              "- Build real-world projects to showcase skills\n" +
-              "- Consider certifications from leading training institutes\n" +
-              "- Network with industry professionals in Kerala tech community\n\n" +
+              "- Focus on full-stack capabilities\n" +
+              "- Build real-world projects\n" +
+              "- Consider certifications from leading institutes\n" +
+              "- Network with Kerala tech community\n\n" +
               "---\n\n" +
               "🏷️ **Tags:** " + tags + "\n" +
               "🔑 **Keywords:** " + keywords + "\n" +
               "🤖 **Generated by Novox AI** (" + usedModel + ") | 📅 " + new Date().toISOString() + "\n\n" +
-              "**Ready to upskill?** Join the **best software training institute in Calicut** and transform your career with hands-on training in MERN Stack, Flutter, Python + React, and more.\n\n" +
-              "📍 **Novox Edtech LLP** | Calicut, Kerala\n" +
-              "🌐 [novoxedtechllp.com](https://novoxedtechllp.com)";
+              "**Ready to upskill?** Join the **best software training institute in Calicut** — Novox Edtech LLP.\n\n" +
+              "📍 Calicut, Kerala | 🌐 [novoxedtechllp.com](https://novoxedtechllp.com)";
 
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: title,
               body: body,
-              labels: ["blog", "ai-generated", year, topic.toLowerCase()]
+              labels: ["blog", "ai-generated", String(year), topic.toLowerCase()]
             });
 
             console.log("✅ Created: " + title);
-            console.log("📅 Date: " + month + " " + year);
-            console.log("📂 Topic: " + topic);
-            console.log("🤖 Model: " + usedModel);
